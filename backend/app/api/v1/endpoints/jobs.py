@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, get_db
+from app.models.job import ApplicationStatus
 from app.models.user import User
 from app.repositories.job_repository import JobRepository
 from app.repositories.questionnaire_repository import QuestionnaireRepository
@@ -48,9 +49,7 @@ async def apply_to_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job with ID {job_id} not found",
         )
-    application = await job_repo.create_application(
-        job_id=job_id, candidate_id=current_user.id
-    )
+    application = await job_repo.create_application(job_id=job_id, candidate_id=current_user.id)
     return {"message": "Applied successfully", "application_id": str(application.id)}
 
 
@@ -72,9 +71,7 @@ async def submit_questionnaire_answers(
     quest_repo = QuestionnaireRepository(db)
     saved_answers = []
     for ans in payload.answers:
-        res = await quest_repo.save_answer(
-            user_id=current_user.id, question_id=ans.question_id, score=ans.score
-        )
+        res = await quest_repo.save_answer(user_id=current_user.id, question_id=ans.question_id, score=ans.score)
         saved_answers.append(res)
 
     # Update application status if applicable
@@ -82,9 +79,7 @@ async def submit_questionnaire_answers(
     if app:
         from app.models.job import ApplicationStatus
 
-        await job_repo.update_application_status(
-            app, ApplicationStatus.SOFT_SKILLS_COMPLETED
-        )
+        await job_repo.update_application_status(app, ApplicationStatus.SOFT_SKILLS_COMPLETED)
 
     return {
         "message": "Answers submitted successfully",
@@ -95,11 +90,21 @@ async def submit_questionnaire_answers(
 @router.get("/{job_id}/candidates", response_model=list[CandidateSummaryResponse])
 async def get_job_candidates(
     job_id: UUID,
+    min_fit_score: float | None = Query(
+        None, ge=0.0, le=100.0, description="Filtrar candidatos com fit_score maior ou igual ao valor especificado"
+    ),
+    status_filter: ApplicationStatus | None = Query(
+        None, alias="status", description="Filtrar candidatos por status da aplicação"
+    ),
+    limit: int | None = Query(None, ge=1, description="Número máximo de candidatos a retornar"),
+    sort_desc: bool = Query(True, description="Se True, ordena pelos mais compatíveis primeiro"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     recruitment_service = RecruitmentService(db)
-    return await recruitment_service.get_job_candidates(job_id)
+    return await recruitment_service.get_job_candidates(
+        job_id=job_id, min_fit_score=min_fit_score, status_filter=status_filter, limit=limit, sort_desc=sort_desc
+    )
 
 
 @router.post(
@@ -113,6 +118,4 @@ async def get_candidate_impact_analysis(
     db: AsyncSession = Depends(get_db),
 ):
     soft_skills_service = SoftSkillsService(db)
-    return await soft_skills_service.calculate_impact_analysis(
-        job_id=job_id, candidate_id=candidate_id
-    )
+    return await soft_skills_service.calculate_impact_analysis(job_id=job_id, candidate_id=candidate_id)

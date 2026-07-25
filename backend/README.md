@@ -125,9 +125,14 @@ A suíte de testes cobre os fluxos de sucesso (200/201), erros de validação (4
     $$\text{Média Simulação}[d] = \frac{(\text{Média Atual}[d] \times N) + \text{Nota do Candidato}[d]}{N + 1}$$
   - **Retorno**: Pontuação do candidato, média atual do time, simulação pós-contratação, deltas ($\Delta$), lacunas preenchidas (*gaps filled*) e índice de fit (0-100).
 
-### 4. Painel do Recrutador
+### 4. Painel do Recrutador e Filtragem por Fit
 - `GET /api/v1/jobs/{job_id}/candidates`
-  - **Descrição**: Lista todos os candidatos da vaga com o status da candidatura (`APPLIED`, `SOFT_SKILLS_COMPLETED`, `UNDER_REVIEW`, `REJECTED`, `HIRED`), indicador de conclusão do teste e resumo do fit comportamental.
+  - **Descrição**: Lista todos os candidatos da vaga com o status da candidatura, indicador de conclusão do teste e resumo do fit comportamental.
+  - **Parâmetros de Consulta (Query Params)**:
+    - `min_fit_score` (float, ex: `min_fit_score=75.0`): Filtra candidatos com pontuação de fit complementar maior ou igual ao valor informado.
+    - `status` (`ApplicationStatus`, ex: `status=APPLIED`): Filtra por status específico da candidatura (`APPLIED`, `SOFT_SKILLS_COMPLETED`, `UNDER_REVIEW`, `REJECTED`, `HIRED`).
+    - `limit` (int, ex: `limit=5`): Limita o número máximo de candidatos retornados (ex: Top N candidatos).
+    - `sort_desc` (bool, default: `true`): Ordena candidatos pelos mais compatíveis primeiro.
 
 ---
 
