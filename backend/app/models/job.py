@@ -27,19 +27,21 @@ class Job(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
-    questionnaire_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("questionnaires.id", ondelete="RESTRICT"), nullable=False)
+    questionnaire_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("questionnaires.id", ondelete="RESTRICT"), nullable=False
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-        nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
     # Relationships
     team: Mapped["Team"] = relationship("Team", back_populates="jobs")
     questionnaire: Mapped["Questionnaire"] = relationship("Questionnaire", back_populates="jobs")
-    applications: Mapped[list["CandidateApplication"]] = relationship("CandidateApplication", back_populates="job", cascade="all, delete-orphan")
+    applications: Mapped[list["CandidateApplication"]] = relationship(
+        "CandidateApplication", back_populates="job", cascade="all, delete-orphan"
+    )
 
 
 class CandidateApplication(Base):
@@ -49,14 +51,10 @@ class CandidateApplication(Base):
     job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False)
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     status: Mapped[ApplicationStatus] = mapped_column(
-        Enum(ApplicationStatus, name="application_status_enum"),
-        default=ApplicationStatus.APPLIED,
-        nullable=False
+        Enum(ApplicationStatus, name="application_status_enum"), default=ApplicationStatus.APPLIED, nullable=False
     )
     applied_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-        nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
     # Relationships

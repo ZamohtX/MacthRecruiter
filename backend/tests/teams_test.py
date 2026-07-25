@@ -46,15 +46,11 @@ async def test_create_team_unauthorized(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_get_team_profile_success(authenticated_client: AsyncClient):
     # Arrange: create team first
-    team_resp = await authenticated_client.post(
-        "/api/v1/teams", json={"name": "Product Team"}
-    )
+    team_resp = await authenticated_client.post("/api/v1/teams", json={"name": "Product Team"})
     team_id = team_resp.json()["id"]
 
     # Act
-    response = await authenticated_client.get(
-        f"/api/v1/teams/{team_id}/soft-skills-profile"
-    )
+    response = await authenticated_client.get(f"/api/v1/teams/{team_id}/soft-skills-profile")
 
     # Assert
     assert response.status_code == 200
@@ -70,9 +66,7 @@ async def test_get_team_profile_not_found(authenticated_client: AsyncClient):
     random_id = str(uuid.uuid4())
 
     # Act
-    response = await authenticated_client.get(
-        f"/api/v1/teams/{random_id}/soft-skills-profile"
-    )
+    response = await authenticated_client.get(f"/api/v1/teams/{random_id}/soft-skills-profile")
 
     # Assert
     assert response.status_code == 404
@@ -85,9 +79,7 @@ async def test_get_team_profile_validation_error(authenticated_client: AsyncClie
     invalid_id = "not-a-valid-uuid"
 
     # Act
-    response = await authenticated_client.get(
-        f"/api/v1/teams/{invalid_id}/soft-skills-profile"
-    )
+    response = await authenticated_client.get(f"/api/v1/teams/{invalid_id}/soft-skills-profile")
 
     # Assert
     assert response.status_code == 422

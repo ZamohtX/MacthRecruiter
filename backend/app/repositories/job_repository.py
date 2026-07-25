@@ -12,11 +12,7 @@ class JobRepository:
         self.db = db
 
     async def get_by_id(self, job_id: UUID) -> Job | None:
-        stmt = (
-            select(Job)
-            .options(selectinload(Job.team), selectinload(Job.questionnaire))
-            .where(Job.id == job_id)
-        )
+        stmt = select(Job).options(selectinload(Job.team), selectinload(Job.questionnaire)).where(Job.id == job_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -38,9 +34,7 @@ class JobRepository:
         await self.db.refresh(job)
         return job
 
-    async def create_application(
-        self, job_id: UUID, candidate_id: UUID
-    ) -> CandidateApplication:
+    async def create_application(self, job_id: UUID, candidate_id: UUID) -> CandidateApplication:
         stmt = select(CandidateApplication).where(
             CandidateApplication.job_id == job_id,
             CandidateApplication.candidate_id == candidate_id,
@@ -50,17 +44,13 @@ class JobRepository:
         if existing:
             return existing
 
-        app = CandidateApplication(
-            job_id=job_id, candidate_id=candidate_id, status=ApplicationStatus.APPLIED
-        )
+        app = CandidateApplication(job_id=job_id, candidate_id=candidate_id, status=ApplicationStatus.APPLIED)
         self.db.add(app)
         await self.db.commit()
         await self.db.refresh(app)
         return app
 
-    async def get_application(
-        self, job_id: UUID, candidate_id: UUID
-    ) -> CandidateApplication | None:
+    async def get_application(self, job_id: UUID, candidate_id: UUID) -> CandidateApplication | None:
         stmt = (
             select(CandidateApplication)
             .options(

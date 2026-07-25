@@ -22,9 +22,7 @@ class AuthService:
         try:
             google_info = verify_google_id_token(auth_data.id_token)
         except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)
-            ) from e
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
 
         email = google_info.get("email")
         name = google_info.get("name", email.split("@")[0] if email else "User")
@@ -61,9 +59,7 @@ class AuthService:
             else:
                 initial_role = UserRole.RECRUITER
 
-            user = await self.user_repo.create(
-                email=email, name=name, role=initial_role, google_id=google_id
-            )
+            user = await self.user_repo.create(email=email, name=name, role=initial_role, google_id=google_id)
         else:
             if not user.google_id and google_id:
                 user.google_id = google_id

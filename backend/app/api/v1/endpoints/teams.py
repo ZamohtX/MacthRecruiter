@@ -40,17 +40,13 @@ async def create_team_invite(
     team_repo = TeamRepository(db)
     team = await team_repo.get_by_id(id)
     if not team:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Team with ID {id} not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Team with ID {id} not found")
 
     token_str = secrets.token_urlsafe(32)
     invite = await team_repo.create_invite_token(team_id=id, token_str=token_str)
     invite_url = f"/teams/{id}/invites?token={token_str}"
 
-    return TeamInviteCreateResponse(
-        invite_token=invite.token, invite_url=invite_url, expires_at=invite.expires_at
-    )
+    return TeamInviteCreateResponse(invite_token=invite.token, invite_url=invite_url, expires_at=invite.expires_at)
 
 
 @router.get("/{id}/soft-skills-profile", response_model=TeamSoftSkillsProfileResponse)

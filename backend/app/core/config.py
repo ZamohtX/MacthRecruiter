@@ -5,9 +5,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "MatchRecruiter API"
     API_V1_STR: str = "/api/v1"
 
-    DATABASE_URL: str = (
-        "postgresql+asyncpg://matchuser:matchpassword@localhost:5432/matchrecruiter"
-    )
+    DATABASE_URL: str = "postgresql+asyncpg://matchuser:matchpassword@localhost:5432/matchrecruiter"
 
     SECRET_KEY: str = "dev_secret_key_change_me_in_prod_987654321"
     ALGORITHM: str = "HS256"
@@ -15,9 +13,7 @@ class Settings(BaseSettings):
 
     GOOGLE_CLIENT_ID: str = "mock_google_client_id"
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 settings = Settings()

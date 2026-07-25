@@ -25,9 +25,7 @@ class UserRepository:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def create(
-        self, email: str, name: str, role: UserRole, google_id: str | None = None
-    ) -> User:
+    async def create(self, email: str, name: str, role: UserRole, google_id: str | None = None) -> User:
         user = User(email=email, name=name, role=role, google_id=google_id)
         self.db.add(user)
         await self.db.commit()

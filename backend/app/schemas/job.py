@@ -30,12 +30,8 @@ class PostHiringSimulation(BaseModel):
     current_team_scores: dict[str, float]
     simulated_team_scores: dict[str, float]
     score_deltas: dict[str, float]  # simulated - current
-    gaps_filled: list[
-        str
-    ]  # dimensions where candidate significantly boosts lower team scores
-    overlaps: list[
-        str
-    ]  # dimensions where candidate is already similar or redundant to team high scores
+    gaps_filled: list[str]  # dimensions where candidate significantly boosts lower team scores
+    overlaps: list[str]  # dimensions where candidate is already similar or redundant to team high scores
 
 
 class ImpactAnalysisResponse(BaseModel):

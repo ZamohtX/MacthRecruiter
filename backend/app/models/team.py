@@ -19,15 +19,17 @@ class Team(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-        nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
     # Relationships
     owner: Mapped["User"] = relationship("User", back_populates="owned_teams")
-    members: Mapped[list["TeamMember"]] = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
-    invite_tokens: Mapped[list["TeamInviteToken"]] = relationship("TeamInviteToken", back_populates="team", cascade="all, delete-orphan")
+    members: Mapped[list["TeamMember"]] = relationship(
+        "TeamMember", back_populates="team", cascade="all, delete-orphan"
+    )
+    invite_tokens: Mapped[list["TeamInviteToken"]] = relationship(
+        "TeamInviteToken", back_populates="team", cascade="all, delete-orphan"
+    )
     jobs: Mapped[list["Job"]] = relationship("Job", back_populates="team", cascade="all, delete-orphan")
 
 
@@ -38,9 +40,7 @@ class TeamMember(Base):
     team_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     joined_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-        nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
     # Relationships
@@ -57,9 +57,7 @@ class TeamInviteToken(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-        nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
     # Relationships

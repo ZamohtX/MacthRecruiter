@@ -35,9 +35,7 @@ class SoftSkillsService:
             profile[dim] = round(sum(scores) / len(scores), 2)
         return profile
 
-    async def get_team_soft_skills_profile(
-        self, team_id: UUID
-    ) -> TeamSoftSkillsProfileResponse:
+    async def get_team_soft_skills_profile(self, team_id: UUID) -> TeamSoftSkillsProfileResponse:
         team = await self.team_repo.get_by_id(team_id)
         if not team:
             raise HTTPException(
@@ -73,9 +71,7 @@ class SoftSkillsService:
             dimension_scores=dimension_scores,
         )
 
-    async def calculate_impact_analysis(
-        self, job_id: UUID, candidate_id: UUID
-    ) -> ImpactAnalysisResponse:
+    async def calculate_impact_analysis(self, job_id: UUID, candidate_id: UUID) -> ImpactAnalysisResponse:
         job = await self.job_repo.get_by_id(job_id)
         if not job:
             raise HTTPException(
@@ -104,9 +100,7 @@ class SoftSkillsService:
 
         candidate_scores = await self.get_user_soft_skills_profile(candidate_id)
 
-        all_dimensions = set(current_team_scores.keys()).union(
-            set(candidate_scores.keys())
-        )
+        all_dimensions = set(current_team_scores.keys()).union(set(candidate_scores.keys()))
 
         new_team_size = current_team_size + 1
         simulated_scores = {}
@@ -122,9 +116,7 @@ class SoftSkillsService:
             t_score = current_team_scores.get(dim, 0.0)
 
             if current_team_size > 0:
-                sim_score = round(
-                    ((t_score * current_team_size) + c_score) / new_team_size, 2
-                )
+                sim_score = round(((t_score * current_team_size) + c_score) / new_team_size, 2)
             else:
                 sim_score = c_score
 
@@ -144,9 +136,7 @@ class SoftSkillsService:
                 total_complementarity += max(0, c_score - t_score) * 0.5
 
         # Fit score scaling (0 to 100)
-        fit_score = min(
-            100.0, round(50.0 + (total_complementarity / dim_count) * 20.0, 1)
-        )
+        fit_score = min(100.0, round(50.0 + (total_complementarity / dim_count) * 20.0, 1))
 
         simulation = PostHiringSimulation(
             current_team_size=current_team_size,

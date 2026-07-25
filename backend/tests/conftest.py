@@ -77,9 +77,7 @@ async def recruiter_user(db_session: AsyncSession) -> User:
 
 
 @pytest.fixture
-async def authenticated_client(
-    async_client: AsyncClient, recruiter_user: User
-) -> AsyncClient:
+async def authenticated_client(async_client: AsyncClient, recruiter_user: User) -> AsyncClient:
     token = create_access_token(subject=str(recruiter_user.id))
     async_client.headers.update({"Authorization": f"Bearer {token}"})
     return async_client
