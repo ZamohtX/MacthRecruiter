@@ -37,6 +37,7 @@ problema. Tornar essa diferença mensurável e visível é o produto.
 | [`frontend/README.md`](frontend/README.md) | Telas, decisões de interface e método de visualização de dados |
 | [`docs/visao-de-negocio.md`](docs/visao-de-negocio.md) | Visão de negócio: problema, mercado, concorrência, riscos e decisões em aberto |
 | [`docs/fluxo-mvp.md`](docs/fluxo-mvp.md) | Passo a passo executável do fluxo completo, com chamadas HTTP reais |
+| [`docs/deploy-gcp.md`](docs/deploy-gcp.md) | Deploy no Google Cloud: Cloud Run, Cloud SQL, Firebase Hosting e segredos |
 
 ## Começando
 

@@ -21,11 +21,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # pytest, ruff e aiosqlite ficam fora da imagem de produção; o ambiente
+        # de desenvolvimento os pede porque `make test` roda dentro do contêiner.
+        INSTALL_DEV: "true"
     container_name: matchrecruiter_api
     restart: always
     ports:
       - "8000:8000"
     environment:
+      - ENVIRONMENT=development
       - DATABASE_URL=postgresql+asyncpg://matchuser:matchpassword@db:5432/matchrecruiter
       - SECRET_KEY=supersecretjwtkey_change_in_production_1234567890
       - ALGORITHM=HS256

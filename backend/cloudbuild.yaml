@@ -1,0 +1,88 @@
+# Pipeline de deploy do backend no Cloud Run.
+#
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions=_INSTANCE_CONNECTION_NAME=projeto:regiao:instancia,_CORS_ORIGINS='["https://seu-front.web.app"]',_GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+#
+# A ordem importa: as migrações rodam num job separado e precisam terminar
+# antes da nova revisão receber tráfego, senão a API sobe contra um schema
+# desatualizado. Ver docs/deploy-gcp.md para o provisionamento inicial.
+
+substitutions:
+  _REGION: southamerica-east1
+  _REPO: matchrecruiter
+  _SERVICE: matchrecruiter-api
+  _JOB: matchrecruiter-release
+  _INSTANCE_CONNECTION_NAME: "" # projeto:regiao:instancia do Cloud SQL
+  _CORS_ORIGINS: "" # JSON: ["https://seu-front.web.app"]
+  _GOOGLE_CLIENT_ID: ""
+  _MAX_INSTANCES: "4"
+  _DATABASE_URL_SECRET: matchrecruiter-database-url
+  _JWT_SECRET: matchrecruiter-jwt-secret
+
+steps:
+  # 1. Imagem de produção (sem pytest/ruff: INSTALL_DEV fica no default false).
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - $_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/api:$BUILD_ID
+      - -t
+      - $_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/api:latest
+      - .
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: [push, --all-tags, "$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/api"]
+
+  # 2. Migrações + seed, com a mesma imagem. `--wait` faz o build falhar (e o
+  #    deploy não acontecer) se a migração quebrar.
+  - id: release-job
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - $_JOB
+      - --region=$_REGION
+      - --image=$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/api:$BUILD_ID
+      - --command=sh
+      - --args=scripts/release.sh
+      - --set-cloudsql-instances=$_INSTANCE_CONNECTION_NAME
+      - --set-secrets=DATABASE_URL=$_DATABASE_URL_SECRET:latest,SECRET_KEY=$_JWT_SECRET:latest
+      - --set-env-vars=^##^ENVIRONMENT=production##AUTO_SEED=false##CORS_ORIGINS=$_CORS_ORIGINS##GOOGLE_CLIENT_ID=$_GOOGLE_CLIENT_ID
+      - --max-retries=1
+      - --task-timeout=10m
+      - --execute-now
+      - --wait
+
+  # 3. Serviço. O delimitador ^##^ existe porque CORS_ORIGINS é um JSON com
+  #    vírgulas — com o separador padrão o gcloud quebraria a lista em pedaços.
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - $_SERVICE
+      - --region=$_REGION
+      - --image=$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/api:$BUILD_ID
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --cpu=1
+      - --memory=512Mi
+      - --min-instances=0
+      - --max-instances=$_MAX_INSTANCES
+      - --set-cloudsql-instances=$_INSTANCE_CONNECTION_NAME
+      - --set-secrets=DATABASE_URL=$_DATABASE_URL_SECRET:latest,SECRET_KEY=$_JWT_SECRET:latest
+      - --set-env-vars=^##^ENVIRONMENT=production##AUTO_SEED=false##CORS_ORIGINS=$_CORS_ORIGINS##GOOGLE_CLIENT_ID=$_GOOGLE_CLIENT_ID
+
+images:
+  - $_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/api:$BUILD_ID
+  - $_REGION-docker.pkg.dev/$PROJECT_ID/$_REPO/api:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
