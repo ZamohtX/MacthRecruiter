@@ -22,8 +22,8 @@ declare global {
 function Mark({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 26 26" aria-hidden="true">
-      <path d="M2 21V5l7.5 8L17 5v16" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinejoin="round" />
-      <path d="M17 13l7-8v16l-7-8z" fill="#3fe07b" />
+      <path className="mark-letter" d="M2 21V5l7.5 8L17 5v16" fill="none" strokeWidth="2.6" strokeLinejoin="round" />
+      <path className="mark-chevron" d="M17 13l7-8v16l-7-8z" />
     </svg>
   );
 }
@@ -42,7 +42,7 @@ function GapRadar() {
         inverso: cobre exatamente o fator em que o time é mais fraco.
       </desc>
 
-      <g stroke="rgba(255,255,255,0.13)" fill="none" strokeWidth="1">
+      <g className="radar-grid" fill="none" strokeWidth="1">
         <polygon points="150,40 254.6,116 214.7,239 85.3,239 45.4,116" />
         <polygon points="150,67.5 228.4,124.5 198.5,216.7 101.5,216.7 71.6,124.5" />
         <polygon points="150,95 202.3,133 182.3,194.5 117.7,194.5 97.7,133" />
@@ -53,25 +53,21 @@ function GapRadar() {
       <polygon
         className="poly-team"
         points="150,59.8 231.6,123.5 172.6,181.1 102.1,215.9 66.3,122.8"
-        fill="rgba(199,178,214,0.10)"
-        stroke="#c7b2d6"
         strokeWidth="2"
         strokeDasharray="5 4"
       />
       <polygon
         className="poly-cand"
         points="150,100.5 204.4,132.3 206.9,228.3 119,192.7 92.5,131.3"
-        fill="rgba(63,224,123,0.22)"
-        stroke="#3fe07b"
         strokeWidth="2.4"
       />
 
       <g className="gap-mark">
-        <circle cx="172.6" cy="181.1" r="16" fill="none" stroke="#3fe07b" strokeWidth="1.5" />
+        <circle cx="172.6" cy="181.1" r="16" fill="none" strokeWidth="1.5" />
       </g>
-      <circle cx="172.6" cy="181.1" r="4" fill="#3fe07b" />
+      <circle className="gap-dot" cx="172.6" cy="181.1" r="4" />
 
-      <g fontFamily="Instrument Sans, sans-serif" fontSize="10.5" fill="#9b84ac" textAnchor="middle">
+      <g className="radar-label" fontFamily="Instrument Sans, sans-serif" fontSize="10.5" textAnchor="middle">
         <text x="150" y="28">
           Abertura
         </text>

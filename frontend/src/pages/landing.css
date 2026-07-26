@@ -12,20 +12,27 @@
  */
 
 .mr-landing {
-  --void: #12031a;
-  --aubergine: #240635;
-  --plum: #3a0b52;
-  --plum-lift: #4a1268;
+  /* Nenhum tom novo: cada valor abaixo é um dos cinco tokens de marca do
+     index.css, puro ou com opacidade/mistura — a mesma regra que o tema
+     claro/escuro segue. É o que mantém landing e app com uma identidade só.
 
-  --green: #3fe07b;
-  --ink: #08170e;
+     A landing não acompanha o seletor de tema, de propósito: quem chega aqui
+     ainda não tem sessão nem preferência salva, e a primeira impressão é a
+     marca, não uma configuração de sistema. */
+  --void: var(--brand-void);
+  --aubergine: color-mix(in srgb, var(--brand-void) 84%, var(--brand-violet) 16%);
+  --plum: var(--brand-violet);
+  --plum-lift: var(--brand-violet-light);
 
-  --white: #ffffff;
-  --lilac: #c7b2d6;
-  --lilac-dim: #9b84ac;
+  --green: var(--brand-green);
+  --ink: var(--brand-void);
 
-  --hairline: rgba(255, 255, 255, 0.11);
-  --card: rgba(255, 255, 255, 0.045);
+  --white: var(--brand-mist);
+  --lilac: rgba(217, 217, 217, 0.72);
+  --lilac-dim: rgba(217, 217, 217, 0.5);
+
+  --hairline: rgba(217, 217, 217, 0.12);
+  --card: rgba(217, 217, 217, 0.045);
 
   --display: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
   --body: "Instrument Sans", system-ui, -apple-system, sans-serif;
@@ -56,8 +63,8 @@
   background:
     radial-gradient(58% 42% at 50% 0%, var(--plum-lift) 0%, transparent 60%),
     radial-gradient(75% 40% at 50% 30%, var(--plum) 0%, transparent 72%),
-    radial-gradient(95% 45% at 50% 100%, #2c0840 0%, transparent 68%),
-    linear-gradient(180deg, var(--aubergine) 0%, #1c0428 58%, #21052f 100%);
+    radial-gradient(95% 45% at 50% 100%, var(--plum) 0%, transparent 68%),
+    linear-gradient(180deg, var(--aubergine) 0%, var(--void) 58%, var(--aubergine) 100%);
 }
 
 .mr-landing > * {
@@ -199,7 +206,7 @@
 }
 
 .mr-landing .btn-primary:hover:not(:disabled) {
-  background: #5ce892;
+  background: color-mix(in srgb, var(--green) 78%, var(--brand-mist) 22%);
   transform: translateY(-1px);
 }
 
@@ -210,7 +217,7 @@
 }
 
 .mr-landing .btn-ghost:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.32);
+  border-color: rgba(217, 217, 217, 0.34);
   transform: translateY(-1px);
 }
 
@@ -281,7 +288,7 @@
   margin-top: clamp(3rem, 6vw, 4.5rem);
   border: 1px solid var(--hairline);
   border-radius: 26px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
+  background: linear-gradient(180deg, rgba(217, 217, 217, 0.06), rgba(217, 217, 217, 0.015));
   padding: clamp(1.5rem, 4vw, 2.75rem);
   display: grid;
   grid-template-columns: 1fr 1.05fr;
@@ -398,15 +405,40 @@
 }
 
 .mr-landing .poly-team {
+  fill: rgba(217, 217, 217, 0.1);
+  stroke: var(--lilac);
   animation: mrDrawIn 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
 .mr-landing .poly-cand {
+  fill: color-mix(in srgb, var(--green) 20%, transparent);
+  stroke: var(--green);
   animation: mrDrawIn 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 0.45s both;
 }
 
 .mr-landing .gap-mark {
+  stroke: var(--green);
   animation: mrPulse 2.6s ease-in-out 1.3s infinite;
+}
+
+.mr-landing .radar-grid {
+  stroke: rgba(217, 217, 217, 0.14);
+}
+
+.mr-landing .gap-dot {
+  fill: var(--green);
+}
+
+.mr-landing .radar-label {
+  fill: var(--lilac-dim);
+}
+
+.mr-landing .mark-letter {
+  stroke: var(--white);
+}
+
+.mr-landing .mark-chevron {
+  fill: var(--green);
 }
 
 /* ── Seções ─────────────────────────────────────────────────────────── */
@@ -448,8 +480,8 @@
 /* O fit complementar é o que ranqueia — é o único com a borda viva. O
    suplementar fica deliberadamente apagado. */
 .mr-landing .panel-lead {
-  border-color: rgba(63, 224, 123, 0.4);
-  background: rgba(63, 224, 123, 0.06);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
+  background: color-mix(in srgb, var(--green) 7%, transparent);
 }
 
 .mr-landing .panel-lead h3 {
@@ -537,7 +569,7 @@
 .mr-landing .signin-card {
   border: 1px solid var(--hairline);
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(180deg, rgba(217, 217, 217, 0.07), rgba(217, 217, 217, 0.02));
   padding: clamp(1.5rem, 4vw, 2.25rem);
   margin-top: 1.8rem;
   text-align: left;
@@ -587,7 +619,7 @@
 .mr-landing .hint code,
 .mr-landing .demo-note code {
   font-size: 0.94em;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(217, 217, 217, 0.1);
   border-radius: 4px;
   padding: 0.1em 0.35em;
 }
@@ -611,11 +643,11 @@
 .mr-landing .error {
   margin-top: 1rem;
   border-radius: 12px;
-  background: rgba(224, 82, 82, 0.14);
-  border: 1px solid rgba(224, 82, 82, 0.4);
+  background: color-mix(in srgb, var(--status-critical) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status-critical) 45%, transparent);
   padding: 0.8rem 1rem;
   font-size: 0.9rem;
-  color: #ffc9c9;
+  color: color-mix(in srgb, var(--status-critical) 32%, var(--brand-mist) 68%);
 }
 
 /* ── Fechamento ─────────────────────────────────────────────────────── */
