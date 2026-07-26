@@ -24,8 +24,9 @@ problema. Tornar essa diferença mensurável e visível é o produto.
 
 | Componente | Status |
 | :--- | :--- |
-| **Backend** (`backend/`) | MVP funcional — diagnóstico do time, perfil-alvo por lacuna, aplicação do teste, simulação pós-contratação, ranking e contratação |
+| **Backend** (`backend/`) | MVP funcional — diagnóstico do time, perfil-alvo por lacuna, aplicação do teste em níveis, simulação pós-contratação, ranking e contratação |
 | **Frontend** (`frontend/`) | MVP funcional — React 19 + TypeScript + Vite + React Router 8, cobrindo as telas de recrutador, integrante e candidato |
+| **Teste gamificado** (Etapa 5) | Funcional — 4 níveis, checkpoint entre blocos, sequência da sessão, tempo restante e duração medida. Sem adaptatividade, que é V2 |
 | Análise de CV/GitHub, micro-resumo por IA, análise de entrevista | Não iniciados — Etapas 3, 6 e 7 do fluxo completo |
 
 ## Documentação

@@ -34,8 +34,9 @@ export function MyAssessmentPage() {
       title="Diagnóstico comportamental"
       intro={
         <>
-          {questionnaire.data.questions.length} situações de trabalho. Em cada uma, escolha a conduta
-          mais parecida com a sua — <strong>todas são posturas profissionais legítimas</strong>, não
+          {questionnaire.data.questions.length} situações de trabalho em {questionnaire.data.levels.length} níveis,
+          cerca de {questionnaire.data.estimated_minutes} min. Em cada uma, escolha a conduta mais
+          parecida com a sua — <strong>todas são posturas profissionais legítimas</strong>, não
           existe alternativa certa.
         </>
       }
@@ -100,7 +101,8 @@ export function ApplyPage() {
       <Callout tone="info" title="Como este processo funciona">
         A equipe já respondeu este mesmo teste. Suas respostas são comparadas com o perfil do time
         para entender <strong>o que você acrescenta</strong> — não para ver se você se parece com
-        eles. Leva cerca de 10 minutos e o progresso fica salvo.
+        eles. O teste é dividido em níveis, mostra quanto falta a cada passo e o progresso fica
+        salvo: dá para parar num checkpoint e voltar depois.
       </Callout>
 
       <AssessmentRunner

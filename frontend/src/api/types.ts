@@ -138,7 +138,29 @@ export interface Question {
   context: string;
   text: string;
   position: number;
+  /** Bloco a que o cenário pertence. Só de apresentação. */
+  level: number;
   options: QuestionOption[];
+}
+
+/**
+ * Um bloco de cenários.
+ *
+ * Os rótulos vêm do backend de propósito: se o banco de itens crescer, a trilha
+ * acompanha sozinha em vez de a interface inventar nome e contagem.
+ */
+export interface Level {
+  index: number;
+  title: string;
+  subtitle: string;
+  first_position: number;
+  question_count: number;
+  estimated_seconds: number;
+}
+
+export interface LevelProgress extends Level {
+  answered_questions: number;
+  is_complete: boolean;
 }
 
 export interface Questionnaire {
@@ -149,6 +171,8 @@ export interface Questionnaire {
   format: string;
   traits: string[];
   derived_dimensions: string[];
+  levels: Level[];
+  estimated_minutes: number;
   questions: Question[];
 }
 
@@ -161,6 +185,18 @@ export interface AssessmentProgress {
   missing_question_ids: string[];
   trait_scores: ScoreMap;
   dimension_scores: ScoreMap;
+  levels: LevelProgress[];
+  current_level: number;
+  /** Soma dos tempos medidos. Nulo quando nenhuma resposta trouxe medida. */
+  elapsed_seconds: number | null;
+  estimated_seconds_remaining: number;
+}
+
+/** Uma escolha a enviar. `elapsed_ms` é o tempo gasto naquele cenário. */
+export interface AnswerSubmission {
+  question_id: string;
+  selected_option_id: string;
+  elapsed_ms?: number;
 }
 
 export interface SubmitAnswersResponse {
@@ -174,6 +210,7 @@ export interface AssessmentAnswer {
   id: string;
   question_id: string;
   selected_option_id: string;
+  elapsed_ms: number | null;
   created_at: string;
 }
 

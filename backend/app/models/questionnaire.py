@@ -126,6 +126,19 @@ class AssessmentAnswer(Base):
     selected_option_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("question_options.id", ondelete="CASCADE"), nullable=False
     )
+    # Tempo que a pessoa levou neste cenário, medido pelo cliente.
+    #
+    # Existe por dois motivos. Primeiro, a duração-alvo de 10–15 min do teste é
+    # uma **premissa** que o documento de visão manda validar com dado real
+    # (§Etapa 5) — sem medir, ela nunca sai do papel. Segundo, é o insumo para a
+    # detecção de resposta apressada prevista em §10.4: quem fecha 20 cenários em
+    # 40 segundos não leu nenhum, e o perfil resultante não vale nada.
+    #
+    # Nulo é esperado: respostas gravadas por script (seed, demo, testes) e as
+    # anteriores a esta coluna não têm medida. Só o cliente sabe o tempo real, e
+    # por isso ele **não é confiável para punir ninguém** — serve para calibrar e
+    # para levantar suspeita, não para eliminar candidato.
+    elapsed_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )

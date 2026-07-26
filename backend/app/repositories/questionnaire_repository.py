@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import select
@@ -10,6 +11,16 @@ from app.models.questionnaire import (
     Questionnaire,
     QuestionOption,
 )
+
+
+@dataclass(frozen=True)
+class AnswerInput:
+    """Uma escolha a gravar, já validada contra o instrumento pelo serviço."""
+
+    question_id: UUID
+    selected_option_id: UUID
+    elapsed_ms: int | None = None
+
 
 # Carrega o instrumento inteiro — itens, alternativas e cargas nos fatores.
 # Sem as cargas não é possível pontuar uma resposta, e lazy loading em sessão
@@ -74,30 +85,41 @@ class QuestionnaireRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def save_answers(self, user_id: UUID, options_by_question: dict[UUID, UUID]) -> list[AssessmentAnswer]:
+    async def save_answers(self, user_id: UUID, answers: list[AnswerInput]) -> list[AssessmentAnswer]:
         """Insere ou atualiza várias escolhas em uma única transação.
 
         Uma submissão parcialmente gravada deixaria o perfil do respondente
         inconsistente, então tudo entra ou nada entra.
         """
-        if not options_by_question:
+        if not answers:
             return []
 
         stmt = select(AssessmentAnswer).where(
             AssessmentAnswer.user_id == user_id,
-            AssessmentAnswer.question_id.in_(list(options_by_question)),
+            AssessmentAnswer.question_id.in_([a.question_id for a in answers]),
         )
         result = await self.db.execute(stmt)
         existing = {a.question_id: a for a in result.scalars().all()}
 
         saved: list[AssessmentAnswer] = []
-        for question_id, option_id in options_by_question.items():
-            answer = existing.get(question_id)
+        for incoming in answers:
+            answer = existing.get(incoming.question_id)
             if answer is None:
-                answer = AssessmentAnswer(user_id=user_id, question_id=question_id, selected_option_id=option_id)
+                answer = AssessmentAnswer(
+                    user_id=user_id,
+                    question_id=incoming.question_id,
+                    selected_option_id=incoming.selected_option_id,
+                    elapsed_ms=incoming.elapsed_ms,
+                )
                 self.db.add(answer)
             else:
-                answer.selected_option_id = option_id
+                answer.selected_option_id = incoming.selected_option_id
+                # Vale a **primeira** medida. Revisar uma escolha já lida leva
+                # segundos, e sobrescrever encurtaria artificialmente a duração
+                # do teste — justamente o número que esta coluna existe para
+                # medir.
+                if answer.elapsed_ms is None:
+                    answer.elapsed_ms = incoming.elapsed_ms
             saved.append(answer)
 
         await self.db.commit()

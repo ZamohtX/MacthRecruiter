@@ -1,4 +1,5 @@
 import type {
+  AnswerSubmission,
   Application,
   ApplicationStatus,
   AssessmentAnswer,
@@ -99,7 +100,7 @@ export const api = {
   questionnaires: {
     getDefault: () => request<Questionnaire>("/questionnaires/default"),
     get: (id: string) => request<Questionnaire>(`/questionnaires/${id}`),
-    submit: (id: string, answers: { question_id: string; selected_option_id: string }[]) =>
+    submit: (id: string, answers: AnswerSubmission[]) =>
       post<SubmitAnswersResponse>(`/questionnaires/${id}/answers`, { answers }),
     progress: (id: string) => request<AssessmentProgress>(`/questionnaires/${id}/my-progress`),
     myAnswers: (id: string) => request<AssessmentAnswer[]>(`/questionnaires/${id}/my-answers`),
@@ -112,7 +113,7 @@ export const api = {
     get: (jobId: string) => request<JobDetail>(`/jobs/${jobId}`),
     questionnaire: (jobId: string) => request<Questionnaire>(`/jobs/${jobId}/questionnaire`),
     apply: (jobId: string) => post<{ message: string; application_id: string }>(`/jobs/${jobId}/apply`),
-    submitAnswers: (jobId: string, answers: { question_id: string; selected_option_id: string }[]) =>
+    submitAnswers: (jobId: string, answers: AnswerSubmission[]) =>
       post<SubmitAnswersResponse>(`/jobs/${jobId}/answers`, { answers }),
     myProgress: (jobId: string) => request<AssessmentProgress>(`/jobs/${jobId}/my-progress`),
     candidates: (jobId: string, params?: { min_fit_score?: number; status?: ApplicationStatus }) => {

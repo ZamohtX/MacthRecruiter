@@ -11,9 +11,14 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.gamification import build_levels, estimated_seconds
 from app.models.questionnaire import AssessmentAnswer, Question, Questionnaire
-from app.repositories.questionnaire_repository import QuestionnaireRepository
-from app.schemas.questionnaire import AssessmentProgressResponse, SingleAnswerSubmit
+from app.repositories.questionnaire_repository import AnswerInput, QuestionnaireRepository
+from app.schemas.questionnaire import (
+    AssessmentProgressResponse,
+    LevelProgressResponse,
+    SingleAnswerSubmit,
+)
 from app.services.scoring import (
     ItemBounds,
     ScoredOption,
@@ -122,7 +127,17 @@ class AssessmentService:
                     detail=(f"A alternativa {answer.selected_option_id} não pertence ao cenário {answer.question_id}."),
                 )
 
-        saved = await self.quest_repo.save_answers(user_id, {a.question_id: a.selected_option_id for a in answers})
+        saved = await self.quest_repo.save_answers(
+            user_id,
+            [
+                AnswerInput(
+                    question_id=a.question_id,
+                    selected_option_id=a.selected_option_id,
+                    elapsed_ms=a.elapsed_ms,
+                )
+                for a in answers
+            ],
+        )
         progress = await self.get_progress(user_id, questionnaire_id)
         return len(saved), progress
 
@@ -130,10 +145,16 @@ class AssessmentService:
         questionnaire = await self.get_questionnaire_or_404(questionnaire_id)
         answers = await self.quest_repo.get_user_answers_for_questionnaire(user_id, questionnaire_id)
 
-        all_ids = {q.id for q in questionnaire.questions}
+        ordered = list(questionnaire.questions)
+        all_ids = {q.id for q in ordered}
         answered_ids = {a.question_id for a in answers}
 
         traits = trait_profile_from_answers(answers)
+        levels = self._level_progress(ordered, answered_ids)
+
+        # Tempo medido: só as respostas que trouxeram medida entram. Somar zero
+        # pelas que vieram sem ela produziria um "teste de 4 minutos" falso.
+        measured = [a.elapsed_ms for a in answers if a.elapsed_ms is not None]
 
         return AssessmentProgressResponse(
             questionnaire_id=questionnaire_id,
@@ -144,7 +165,37 @@ class AssessmentService:
             missing_question_ids=sorted(all_ids - answered_ids, key=str),
             trait_scores=traits,
             dimension_scores=soft_skills_from_traits(traits),
+            levels=levels,
+            current_level=next((level.index for level in levels if not level.is_complete), max(0, len(levels) - 1)),
+            elapsed_seconds=round(sum(measured) / 1000) if measured else None,
+            estimated_seconds_remaining=estimated_seconds(len(all_ids) - len(answered_ids & all_ids)),
         )
+
+    @staticmethod
+    def _level_progress(ordered: list[Question], answered_ids: set[UUID]) -> list[LevelProgressResponse]:
+        """Quanto de cada bloco a pessoa já respondeu.
+
+        O corte é pela **ordem de exibição**, a mesma usada em
+        `QuestionnaireResponse.from_model` — caso contrário a UI marcaria como
+        concluído um nível diferente do que mostrou.
+        """
+        progress: list[LevelProgressResponse] = []
+        for level in build_levels(len(ordered)):
+            block = ordered[level.first_position : level.first_position + level.question_count]
+            answered = sum(1 for question in block if question.id in answered_ids)
+            progress.append(
+                LevelProgressResponse(
+                    index=level.index,
+                    title=level.title,
+                    subtitle=level.subtitle,
+                    first_position=level.first_position,
+                    question_count=level.question_count,
+                    estimated_seconds=estimated_seconds(level.question_count),
+                    answered_questions=answered,
+                    is_complete=answered == level.question_count,
+                )
+            )
+        return progress
 
     async def get_answers(self, user_id: UUID, questionnaire_id: UUID) -> list[AssessmentAnswer]:
         await self.get_questionnaire_or_404(questionnaire_id)
