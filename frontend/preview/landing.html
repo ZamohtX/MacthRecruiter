@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MatchRecruit — Contrate pela lacuna, não pela semelhança</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ────────────────────────────────────────────────────────────────
+       * Paleta extraída da tela de login: berinjela profunda, bloom
+       * ameixa e o verde do chevron do logo.
+       *
+       * O verde forte só aparece como AÇÃO (botões, o traço do candidato).
+       * Nada decorativo usa essa cor — é ela que diz "aqui se clica" e
+       * "aqui a lacuna é preenchida".
+       * ──────────────────────────────────────────────────────────────── */
+      :root {
+        --void: #12031a;
+        --aubergine: #240635;
+        --plum: #3a0b52;
+        --plum-lift: #4a1268;
+
+        --green: #3fe07b;
+        --green-deep: #0e9e4f;
+        --ink: #08170e;
+
+        --white: #ffffff;
+        --lilac: #c7b2d6;
+        --lilac-dim: #9b84ac;
+
+        --hairline: rgba(255, 255, 255, 0.11);
+        --card: rgba(255, 255, 255, 0.045);
+
+        --display: "Bricolage Grotesque", Georgia, serif;
+        --body: "Instrument Sans", system-ui, -apple-system, sans-serif;
+
+        --gutter: clamp(1.25rem, 5vw, 4rem);
+        --stack: clamp(5rem, 11vw, 9rem);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--void);
+        color: var(--white);
+        font-family: var(--body);
+        font-size: 1rem;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      /* O bloom que dá o tom da marca: focos de luz ameixa sobre o berinjela,
+         não um gradiente linear de canto a canto.
+         A base nunca chega ao preto — se chegasse, a página perderia a
+         identidade roxa abaixo da dobra e viraria "escuro genérico com
+         verde". O berinjela é a marca; o void é só a borda. */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background:
+          radial-gradient(58% 42% at 50% 0%, var(--plum-lift) 0%, transparent 60%),
+          radial-gradient(75% 40% at 50% 30%, var(--plum) 0%, transparent 72%),
+          radial-gradient(95% 45% at 50% 100%, #2c0840 0%, transparent 68%),
+          linear-gradient(180deg, var(--aubergine) 0%, #1c0428 58%, #21052f 100%);
+      }
+
+      .shell {
+        max-width: 1140px;
+        margin-inline: auto;
+        padding-inline: var(--gutter);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--green);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+
+      /* ── Tipografia ──────────────────────────────────────────────── */
+      h1,
+      h2,
+      h3 {
+        font-family: var(--display);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.03;
+        margin: 0;
+        text-wrap: balance;
+      }
+
+      h1 {
+        font-size: clamp(2.6rem, 7.2vw, 5.1rem);
+      }
+
+      h2 {
+        font-size: clamp(2rem, 4.4vw, 3.1rem);
+      }
+
+      h3 {
+        font-size: 1.28rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      p {
+        margin: 0;
+        text-wrap: pretty;
+      }
+
+      .lede {
+        color: var(--lilac);
+        font-size: clamp(1.05rem, 1.8vw, 1.28rem);
+        line-height: 1.55;
+      }
+
+      .eyebrow {
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--lilac-dim);
+      }
+
+      /* ── Navegação ───────────────────────────────────────────────── */
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+        padding-block: 1.5rem;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-family: var(--display);
+        font-weight: 800;
+        font-size: 1.02rem;
+        letter-spacing: -0.02em;
+        text-decoration: none;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        font-size: 0.93rem;
+      }
+
+      /* `:not(.btn)` é obrigatório: sem ele este seletor (classe + tipo) vence
+         o .btn-primary (classe só) por especificidade e repinta o texto do
+         botão de lilás sobre verde — ilegível. */
+      .nav-links a:not(.btn) {
+        color: var(--lilac);
+        text-decoration: none;
+        transition: color 0.18s ease;
+      }
+
+      .nav-links a:not(.btn):hover {
+        color: var(--white);
+      }
+
+      @media (max-width: 720px) {
+        .nav-links a:not(.btn) {
+          display: none;
+        }
+      }
+
+      /* ── Botões ──────────────────────────────────────────────────── */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border: 0;
+        border-radius: 999px;
+        padding: 0.85rem 1.6rem;
+        font-family: var(--body);
+        font-size: 0.97rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          transform 0.16s ease,
+          background-color 0.16s ease,
+          border-color 0.16s ease;
+      }
+
+      /* Texto escuro sobre o verde claro: o inverso (branco sobre verde)
+         não alcança contraste legível em nenhum passo dessa rampa. */
+      .btn-primary {
+        background: var(--green);
+        color: var(--ink);
+      }
+
+      .btn-primary:hover {
+        background: #5ce892;
+        transform: translateY(-1px);
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--white);
+        border: 1px solid var(--hairline);
+      }
+
+      .btn-ghost:hover {
+        border-color: rgba(255, 255, 255, 0.32);
+        transform: translateY(-1px);
+      }
+
+      /* ── Hero ────────────────────────────────────────────────────── */
+      .hero {
+        padding-block: clamp(3.5rem, 8vw, 6.5rem) 0;
+        text-align: center;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        border: 1px solid var(--hairline);
+        border-radius: 999px;
+        padding: 0.42rem 1rem;
+        font-size: 0.83rem;
+        color: var(--lilac);
+        background: var(--card);
+      }
+
+      .tag .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+
+      .hero h1 {
+        margin-top: 1.6rem;
+        max-width: 15ch;
+        margin-inline: auto;
+      }
+
+      .hero h1 em {
+        font-style: normal;
+        color: var(--green);
+      }
+
+      .hero .lede {
+        margin-top: 1.5rem;
+        max-width: 54ch;
+        margin-inline: auto;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.8rem;
+        margin-top: 2.2rem;
+      }
+
+      .hero-note {
+        margin-top: 1.1rem;
+        font-size: 0.85rem;
+        color: var(--lilac-dim);
+      }
+
+      /* ── Assinatura: o radar da lacuna ───────────────────────────── */
+      .signature {
+        margin-top: clamp(3rem, 6vw, 4.5rem);
+        border: 1px solid var(--hairline);
+        border-radius: 26px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
+        padding: clamp(1.5rem, 4vw, 2.75rem);
+        display: grid;
+        grid-template-columns: 1fr 1.05fr;
+        gap: clamp(1.5rem, 4vw, 3rem);
+        align-items: center;
+        text-align: left;
+      }
+
+      @media (max-width: 860px) {
+        .signature {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .signature figure {
+        margin: 0;
+      }
+
+      .signature svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .legend {
+        display: flex;
+        flex-direction: column;
+        gap: 1.1rem;
+      }
+
+      .legend-row {
+        display: flex;
+        gap: 0.8rem;
+        align-items: flex-start;
+      }
+
+      .swatch {
+        flex: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        margin-top: 0.28rem;
+      }
+
+      .swatch-team {
+        background: transparent;
+        border: 2px solid var(--lilac);
+      }
+
+      .swatch-cand {
+        background: var(--green);
+      }
+
+      .legend-row strong {
+        display: block;
+        font-size: 0.97rem;
+        font-weight: 600;
+      }
+
+      .legend-row span {
+        color: var(--lilac);
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      .verdict {
+        border-top: 1px solid var(--hairline);
+        padding-top: 1.1rem;
+        display: flex;
+        align-items: baseline;
+        gap: 0.7rem;
+      }
+
+      .verdict b {
+        font-family: var(--display);
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--green);
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .verdict span {
+        color: var(--lilac);
+        font-size: 0.92rem;
+      }
+
+      /* Animação de entrada: o time aparece, depois o candidato preenche.
+         A ordem é a mensagem — por isso o atraso, e não um fade genérico. */
+      @keyframes drawIn {
+        from {
+          opacity: 0;
+          transform: scale(0.86);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.35;
+        }
+        50% {
+          opacity: 0.9;
+        }
+      }
+
+      .poly-team,
+      .poly-cand,
+      .gap-mark {
+        transform-origin: 150px 150px;
+      }
+
+      .poly-team {
+        animation: drawIn 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+      }
+
+      .poly-cand {
+        animation: drawIn 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 0.45s both;
+      }
+
+      .gap-mark {
+        animation: pulse 2.6s ease-in-out 1.3s infinite;
+      }
+
+      /* ── Seções ──────────────────────────────────────────────────── */
+      section {
+        padding-block: var(--stack);
+      }
+
+      .section-head {
+        max-width: 62ch;
+      }
+
+      .section-head .lede {
+        margin-top: 1.1rem;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+        gap: 1.25rem;
+        margin-top: 3rem;
+      }
+
+      .card {
+        border: 1px solid var(--hairline);
+        border-radius: 20px;
+        padding: 1.9rem;
+        background: var(--card);
+      }
+
+      .card h3 {
+        margin-bottom: 0.7rem;
+      }
+
+      .card p {
+        color: var(--lilac);
+        font-size: 0.97rem;
+      }
+
+      /* O card do fit complementar é o que ranqueia — é o único com a
+         borda viva. O suplementar fica deliberadamente apagado. */
+      .card-lead {
+        border-color: rgba(63, 224, 123, 0.4);
+        background: rgba(63, 224, 123, 0.06);
+      }
+
+      .card-lead h3 {
+        color: var(--green);
+      }
+
+      /* ── Passos ──────────────────────────────────────────────────── */
+      /* Numerados porque a ordem é real: o time responde ANTES da vaga
+         abrir. Trocar a ordem quebra o método, não só o layout. */
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+        gap: 2.5rem 2rem;
+        margin-top: 3.5rem;
+        counter-reset: step;
+      }
+
+      .step {
+        counter-increment: step;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--hairline);
+      }
+
+      .step::before {
+        content: counter(step, decimal-leading-zero);
+        display: block;
+        font-family: var(--display);
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--green);
+        margin-bottom: 1rem;
+        letter-spacing: 0.06em;
+      }
+
+      .step h3 {
+        margin-bottom: 0.6rem;
+      }
+
+      .step p {
+        color: var(--lilac);
+        font-size: 0.95rem;
+      }
+
+      /* ── Faixa de números ────────────────────────────────────────── */
+      .band {
+        border-block: 1px solid var(--hairline);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+      }
+
+      .band div {
+        padding: 2.5rem 1.5rem;
+        border-right: 1px solid var(--hairline);
+      }
+
+      .band div:last-child {
+        border-right: 0;
+      }
+
+      .band b {
+        display: block;
+        font-family: var(--display);
+        font-size: clamp(2.4rem, 4.5vw, 3.2rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .band span {
+        display: block;
+        margin-top: 0.7rem;
+        color: var(--lilac);
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      /* ── Fechamento ──────────────────────────────────────────────── */
+      .closer {
+        text-align: center;
+      }
+
+      .closer .lede {
+        margin: 1.3rem auto 0;
+        max-width: 48ch;
+      }
+
+      .closer .hero-actions {
+        margin-top: 2.2rem;
+      }
+
+      footer {
+        border-top: 1px solid var(--hairline);
+        padding-block: 2.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem 2rem;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--lilac-dim);
+        font-size: 0.87rem;
+      }
+
+      .disclaimer {
+        max-width: 60ch;
+        line-height: 1.55;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="shell">
+      <nav class="nav">
+        <a class="brand" href="#">
+          <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+            <path d="M2 21V5l7.5 8L17 5v16" fill="none" stroke="#fff" stroke-width="2.6" stroke-linejoin="round" />
+            <path d="M17 13l7-8v16l-7-8z" fill="#3fe07b" />
+          </svg>
+          MatchRecruit
+        </a>
+        <div class="nav-links">
+          <a href="#metodo">Método</a>
+          <a href="#como">Como funciona</a>
+          <a href="#ressalva">Validade</a>
+          <a class="btn btn-primary" href="#">Entrar</a>
+        </div>
+      </nav>
+    </div>
+
+    <!-- ── Hero ──────────────────────────────────────────────────── -->
+    <header class="shell hero">
+      <span class="tag"><span class="dot"></span> Diagnóstico do time antes da vaga abrir</span>
+
+      <h1>Contrate pela <em>lacuna</em>, não pela semelhança.</h1>
+
+      <p class="lede">
+        Times criativos contratam mais criativos. Times analíticos contratam mais analíticos. O
+        resultado é uma equipe maior, não melhor. O MatchRecruit mede a diferença — e ranqueia por
+        ela.
+      </p>
+
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#">Começar o diagnóstico</a>
+        <a class="btn btn-ghost" href="#como">Ver como funciona</a>
+      </div>
+
+      <p class="hero-note">20 situações de trabalho. Sem resposta certa. 12 minutos.</p>
+
+      <!-- Assinatura: a lacuna do time e o candidato que a preenche. -->
+      <div class="signature">
+        <figure>
+          <svg viewBox="0 0 300 300" role="img" aria-labelledby="radar-titulo radar-desc">
+            <title id="radar-titulo">Perfil do time e do candidato nos cinco fatores</title>
+            <desc id="radar-desc">
+              O time pontua alto em quatro fatores e baixo em Extroversão. O candidato tem o
+              formato inverso: cobre exatamente o fator em que o time é mais fraco.
+            </desc>
+
+            <g stroke="rgba(255,255,255,0.13)" fill="none" stroke-width="1">
+              <polygon points="150,40 254.6,116 214.7,239 85.3,239 45.4,116" />
+              <polygon points="150,67.5 228.4,124.5 198.5,216.7 101.5,216.7 71.6,124.5" />
+              <polygon points="150,95 202.3,133 182.3,194.5 117.7,194.5 97.7,133" />
+              <polygon points="150,122.5 176.2,141.5 166.2,172.2 133.8,172.2 123.8,141.5" />
+              <path d="M150 150L150 40M150 150L254.6 116M150 150L214.7 239M150 150L85.3 239M150 150L45.4 116" />
+            </g>
+
+            <!-- Time: contorno tracejado, sem preenchimento forte. É o
+                 estado atual, não o que se quer destacar. -->
+            <polygon
+              class="poly-team"
+              points="150,59.8 231.6,123.5 172.6,181.1 102.1,215.9 66.3,122.8"
+              fill="rgba(199,178,214,0.10)"
+              stroke="#c7b2d6"
+              stroke-width="2"
+              stroke-dasharray="5 4"
+            />
+
+            <!-- Candidato: sólido e verde, e o vértice inferior direito
+                 avança justamente onde o time recua. -->
+            <polygon
+              class="poly-cand"
+              points="150,100.5 204.4,132.3 206.9,228.3 119,192.7 92.5,131.3"
+              fill="rgba(63,224,123,0.22)"
+              stroke="#3fe07b"
+              stroke-width="2.4"
+            />
+
+            <g class="gap-mark">
+              <circle cx="172.6" cy="181.1" r="16" fill="none" stroke="#3fe07b" stroke-width="1.5" />
+            </g>
+            <circle cx="172.6" cy="181.1" r="4" fill="#3fe07b" />
+
+            <g
+              font-family="Instrument Sans, sans-serif"
+              font-size="10.5"
+              fill="#9b84ac"
+              text-anchor="middle"
+            >
+              <text x="150" y="28">Abertura</text>
+              <text x="268" y="112">Consciência</text>
+              <text x="222" y="256">Extroversão</text>
+              <text x="78" y="256">Amabilidade</text>
+              <text x="32" y="112">Estabilidade</text>
+            </g>
+          </svg>
+        </figure>
+
+        <div class="legend">
+          <p class="eyebrow">Vaga de Analista de Dados · time de 6 pessoas</p>
+
+          <div class="legend-row">
+            <span class="swatch swatch-team"></span>
+            <span>
+              <strong>O time hoje</strong>
+              Forte em quatro fatores, fraco em Extroversão. A lacuna não aparece em currículo
+              nenhum.
+            </span>
+          </div>
+
+          <div class="legend-row">
+            <span class="swatch swatch-cand"></span>
+            <span>
+              <strong>Candidata Marina</strong>
+              O formato inverso. Não é a pessoa mais parecida com o time — é a que completa o que
+              falta.
+            </span>
+          </div>
+
+          <div class="verdict">
+            <b>+18</b>
+            <span>pontos na média do time em Extroversão, se ela entrar. Simulado antes da
+              contratação.</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Método ────────────────────────────────────────────────── -->
+    <section id="metodo" class="shell">
+      <div class="section-head">
+        <p class="eyebrow">O que o mercado trata como uma coisa só</p>
+        <h2>Dois tipos de fit. Só um deles faz o time melhor.</h2>
+        <p class="lede">
+          Quase toda ferramenta de recrutamento mede semelhança e chama isso de fit cultural. Nós
+          separamos os dois, e mostramos os dois.
+        </p>
+      </div>
+
+      <div class="split">
+        <article class="card card-lead">
+          <h3>Fit complementar</h3>
+          <p>
+            O quanto a pessoa cobre o que falta na equipe. É o que ordena a lista de candidatos —
+            porque é o que muda a capacidade do time.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Fit suplementar</h3>
+          <p>
+            O quanto a pessoa se parece com quem já está lá. Aparece no painel, mas não ranqueia:
+            em excesso, é o nome técnico para contratar mais do mesmo.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3>Simulação pós-contratação</h3>
+          <p>
+            Antes de decidir, a plataforma recalcula a média do time como se aquela pessoa já
+            tivesse entrado. A decisão deixa de ser sobre o candidato isolado.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── Números ───────────────────────────────────────────────── -->
+    <div class="shell">
+      <div class="band">
+        <div>
+          <b>20</b>
+          <span>situações de trabalho, com 4 condutas defensáveis em cada</span>
+        </div>
+        <div>
+          <b>5</b>
+          <span>fatores do Big Five, o modelo de personalidade com maior base empírica</span>
+        </div>
+        <div>
+          <b>10</b>
+          <span>soft skills derivadas dos fatores, sem pergunta autodeclarada</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Como funciona ─────────────────────────────────────────── -->
+    <section id="como" class="shell">
+      <div class="section-head">
+        <p class="eyebrow">Como funciona</p>
+        <h2>A ordem é o método.</h2>
+        <p class="lede">
+          O time responde <em>antes</em> de a vaga existir. Inverter isso é como escolher o remédio
+          antes do diagnóstico.
+        </p>
+      </div>
+
+      <div class="steps">
+        <article class="step">
+          <h3>A equipe atual responde</h3>
+          <p>
+            Cada integrante faz o teste de julgamento situacional. Sai o perfil coletivo — e onde
+            ele afunda.
+          </p>
+        </article>
+
+        <article class="step">
+          <h3>A vaga nasce da lacuna</h3>
+          <p>
+            O perfil-alvo não é escrito por intuição: é derivado da diferença entre o time que
+            existe e o que ele precisa ter.
+          </p>
+        </article>
+
+        <article class="step">
+          <h3>O candidato faz o mesmo teste</h3>
+          <p>
+            Mesmo instrumento, mesma escala. Comparação direta, sem tradução entre dois
+            questionários diferentes.
+          </p>
+        </article>
+
+        <article class="step">
+          <h3>Você vê o time depois dele</h3>
+          <p>
+            O ranking mostra quem fecha a lacuna, e a simulação mostra o time resultante. Aí se
+            contrata.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ── Fechamento ────────────────────────────────────────────── -->
+    <section class="shell closer">
+      <h2>Comece pelo time que você já tem.</h2>
+      <p class="lede">
+        O diagnóstico leva 12 minutos por pessoa e não exige nenhuma vaga aberta. É o único passo
+        que precisa vir antes de tudo.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#">Criar o diagnóstico do time</a>
+        <a class="btn btn-ghost" href="#metodo">Entender o método</a>
+      </div>
+    </section>
+
+    <div class="shell">
+      <footer id="ressalva">
+        <span>© 2026 MatchRecruit · Conecta. Avalia. Contrata.</span>
+        <p class="disclaimer">
+          O instrumento é uma proposta de produto, ancorada em Big Five, e não uma medida
+          psicometricamente validada: as cargas dos fatores foram definidas por julgamento informado
+          pela literatura, não estimadas a partir de dados.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

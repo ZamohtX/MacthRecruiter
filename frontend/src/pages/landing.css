@@ -1,0 +1,668 @@
+/*
+ * Estilos da landing de entrada.
+ *
+ * Tudo aqui vive sob `.mr-landing`. O escopo não é preciosismo: o resto da
+ * aplicação roda sobre os tokens neutros do index.css (--surface-1,
+ * --text-primary…), e soltar esta paleta no :root repintaria todas as telas
+ * autenticadas.
+ *
+ * A paleta veio da identidade da marca: berinjela profunda com bloom ameixa,
+ * e o verde do chevron do logo. O verde forte só marca AÇÃO — botões e o
+ * traço do candidato no radar. Nada decorativo usa essa cor.
+ */
+
+.mr-landing {
+  --void: #12031a;
+  --aubergine: #240635;
+  --plum: #3a0b52;
+  --plum-lift: #4a1268;
+
+  --green: #3fe07b;
+  --ink: #08170e;
+
+  --white: #ffffff;
+  --lilac: #c7b2d6;
+  --lilac-dim: #9b84ac;
+
+  --hairline: rgba(255, 255, 255, 0.11);
+  --card: rgba(255, 255, 255, 0.045);
+
+  --display: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
+  --body: "Instrument Sans", system-ui, -apple-system, sans-serif;
+
+  --gutter: clamp(1.25rem, 5vw, 4rem);
+  --stack: clamp(5rem, 11vw, 9rem);
+
+  position: relative;
+  min-height: 100%;
+  background: var(--void);
+  color: var(--white);
+  font-family: var(--body);
+  font-size: 1rem;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* O bloom que dá o tom da marca: focos de luz ameixa sobre o berinjela, não
+   um gradiente linear de canto a canto. A base nunca chega ao preto — se
+   chegasse, a página perderia a identidade roxa abaixo da dobra e viraria
+   "escuro genérico com verde". */
+.mr-landing::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 42% at 50% 0%, var(--plum-lift) 0%, transparent 60%),
+    radial-gradient(75% 40% at 50% 30%, var(--plum) 0%, transparent 72%),
+    radial-gradient(95% 45% at 50% 100%, #2c0840 0%, transparent 68%),
+    linear-gradient(180deg, var(--aubergine) 0%, #1c0428 58%, #21052f 100%);
+}
+
+.mr-landing > * {
+  position: relative;
+  z-index: 1;
+}
+
+.mr-landing .shell {
+  max-width: 1140px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.mr-landing :focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ── Tipografia ─────────────────────────────────────────────────────── */
+.mr-landing h1,
+.mr-landing h2,
+.mr-landing h3 {
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.03;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.mr-landing h1 {
+  font-size: clamp(2.4rem, 7vw, 5.1rem);
+}
+
+.mr-landing h2 {
+  font-size: clamp(1.9rem, 4.4vw, 3.1rem);
+}
+
+.mr-landing h3 {
+  font-size: 1.28rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.mr-landing p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.mr-landing .lede {
+  color: var(--lilac);
+  font-size: clamp(1.02rem, 1.8vw, 1.28rem);
+  line-height: 1.55;
+}
+
+.mr-landing .eyebrow {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lilac-dim);
+}
+
+/* ── Navegação ──────────────────────────────────────────────────────── */
+.mr-landing .nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.mr-landing .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.02rem;
+  letter-spacing: -0.02em;
+  color: var(--white);
+  text-decoration: none;
+}
+
+.mr-landing .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  font-size: 0.93rem;
+}
+
+/* `:not(.btn)` é obrigatório: sem ele este seletor (classe + tipo) vence o
+   .btn-primary (classe só) por especificidade e repinta o texto do botão de
+   lilás sobre verde — ilegível. */
+.mr-landing .nav-links a:not(.btn) {
+  color: var(--lilac);
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+.mr-landing .nav-links a:not(.btn):hover {
+  color: var(--white);
+}
+
+@media (max-width: 780px) {
+  .mr-landing .nav-links a:not(.btn) {
+    display: none;
+  }
+}
+
+/* ── Botões ─────────────────────────────────────────────────────────── */
+.mr-landing .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1.6rem;
+  font-family: var(--body);
+  font-size: 0.97rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    transform 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+/* Texto escuro sobre o verde claro: o inverso (branco sobre verde) não
+   alcança contraste legível em nenhum passo dessa rampa. */
+.mr-landing .btn-primary {
+  background: var(--green);
+  color: var(--ink);
+}
+
+.mr-landing .btn-primary:hover:not(:disabled) {
+  background: #5ce892;
+  transform: translateY(-1px);
+}
+
+.mr-landing .btn-ghost {
+  background: transparent;
+  color: var(--white);
+  border: 1px solid var(--hairline);
+}
+
+.mr-landing .btn-ghost:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.32);
+  transform: translateY(-1px);
+}
+
+.mr-landing .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Hero ───────────────────────────────────────────────────────────── */
+.mr-landing .hero {
+  padding-block: clamp(3rem, 8vw, 6.5rem) 0;
+  text-align: center;
+}
+
+.mr-landing .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.42rem 1rem;
+  font-size: 0.83rem;
+  color: var(--lilac);
+  background: var(--card);
+}
+
+.mr-landing .tag .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  flex: none;
+}
+
+.mr-landing .hero h1 {
+  margin-top: 1.6rem;
+  max-width: 15ch;
+  margin-inline: auto;
+}
+
+.mr-landing .hero h1 em {
+  font-style: normal;
+  color: var(--green);
+}
+
+.mr-landing .hero .lede {
+  margin-top: 1.5rem;
+  max-width: 54ch;
+  margin-inline: auto;
+}
+
+.mr-landing .hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-top: 2.2rem;
+}
+
+.mr-landing .hero-note {
+  margin-top: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--lilac-dim);
+}
+
+/* ── Assinatura: o radar da lacuna ──────────────────────────────────── */
+.mr-landing .signature {
+  margin-top: clamp(3rem, 6vw, 4.5rem);
+  border: 1px solid var(--hairline);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: center;
+  text-align: left;
+}
+
+@media (max-width: 860px) {
+  .mr-landing .signature {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mr-landing .signature figure {
+  margin: 0;
+}
+
+.mr-landing .signature svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.mr-landing .legend {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.mr-landing .legend-row {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+.mr-landing .swatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  margin-top: 0.28rem;
+}
+
+.mr-landing .swatch-team {
+  border: 2px solid var(--lilac);
+}
+
+.mr-landing .swatch-cand {
+  background: var(--green);
+}
+
+.mr-landing .legend-row strong {
+  display: block;
+  font-size: 0.97rem;
+  font-weight: 600;
+}
+
+.mr-landing .legend-row span {
+  color: var(--lilac);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.mr-landing .verdict {
+  border-top: 1px solid var(--hairline);
+  padding-top: 1.1rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+}
+
+.mr-landing .verdict b {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mr-landing .verdict span {
+  color: var(--lilac);
+  font-size: 0.92rem;
+}
+
+/* A ordem da entrada é a mensagem: o time aparece, depois o candidato
+   preenche. Por isso o atraso, e não um fade genérico. */
+@keyframes mrDrawIn {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes mrPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.mr-landing .poly-team,
+.mr-landing .poly-cand,
+.mr-landing .gap-mark {
+  transform-origin: 150px 150px;
+}
+
+.mr-landing .poly-team {
+  animation: mrDrawIn 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.mr-landing .poly-cand {
+  animation: mrDrawIn 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 0.45s both;
+}
+
+.mr-landing .gap-mark {
+  animation: mrPulse 2.6s ease-in-out 1.3s infinite;
+}
+
+/* ── Seções ─────────────────────────────────────────────────────────── */
+.mr-landing section {
+  padding-block: var(--stack);
+}
+
+.mr-landing .section-head {
+  max-width: 62ch;
+}
+
+.mr-landing .section-head .lede {
+  margin-top: 1.1rem;
+}
+
+.mr-landing .split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 1.25rem;
+  margin-top: 3rem;
+}
+
+.mr-landing .panel {
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  padding: 1.9rem;
+  background: var(--card);
+}
+
+.mr-landing .panel h3 {
+  margin-bottom: 0.7rem;
+}
+
+.mr-landing .panel p {
+  color: var(--lilac);
+  font-size: 0.97rem;
+}
+
+/* O fit complementar é o que ranqueia — é o único com a borda viva. O
+   suplementar fica deliberadamente apagado. */
+.mr-landing .panel-lead {
+  border-color: rgba(63, 224, 123, 0.4);
+  background: rgba(63, 224, 123, 0.06);
+}
+
+.mr-landing .panel-lead h3 {
+  color: var(--green);
+}
+
+/* ── Passos ─────────────────────────────────────────────────────────── */
+/* Numerados porque a ordem é real: o time responde ANTES da vaga abrir.
+   Trocar a ordem quebra o método, não só o layout. */
+.mr-landing .steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 2.5rem 2rem;
+  margin-top: 3.5rem;
+  counter-reset: step;
+}
+
+.mr-landing .step {
+  counter-increment: step;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.mr-landing .step::before {
+  content: counter(step, decimal-leading-zero);
+  display: block;
+  font-family: var(--display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--green);
+  margin-bottom: 1rem;
+  letter-spacing: 0.06em;
+}
+
+.mr-landing .step h3 {
+  margin-bottom: 0.6rem;
+}
+
+.mr-landing .step p {
+  color: var(--lilac);
+  font-size: 0.95rem;
+}
+
+/* ── Faixa de números ───────────────────────────────────────────────── */
+.mr-landing .band {
+  border-block: 1px solid var(--hairline);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+
+.mr-landing .band div {
+  padding: 2.5rem 1.5rem;
+  border-right: 1px solid var(--hairline);
+}
+
+.mr-landing .band div:last-child {
+  border-right: 0;
+}
+
+.mr-landing .band b {
+  display: block;
+  font-family: var(--display);
+  font-size: clamp(2.4rem, 4.5vw, 3.2rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.mr-landing .band span {
+  display: block;
+  margin-top: 0.7rem;
+  color: var(--lilac);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+/* ── Entrada ────────────────────────────────────────────────────────── */
+.mr-landing .signin {
+  max-width: 480px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.mr-landing .signin-card {
+  border: 1px solid var(--hairline);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+  margin-top: 1.8rem;
+  text-align: left;
+}
+
+/* O botão do Google é um iframe: não dá para estilizar por dentro, só
+   centralizar e reservar o espaço dele. */
+.mr-landing .gsi-slot {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.mr-landing .field-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.mr-landing .field {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--white);
+  font-family: var(--body);
+  font-size: 0.97rem;
+  padding: 0.8rem 1rem;
+}
+
+.mr-landing .field::placeholder {
+  color: var(--lilac-dim);
+}
+
+.mr-landing .field:focus {
+  border-color: var(--green);
+  outline: none;
+}
+
+.mr-landing .hint {
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--lilac-dim);
+}
+
+.mr-landing .hint code,
+.mr-landing .demo-note code {
+  font-size: 0.94em;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+.mr-landing .demo-note {
+  border-left: 2px solid var(--green);
+  padding-left: 0.9rem;
+  margin-bottom: 1.4rem;
+  color: var(--lilac);
+  font-size: 0.89rem;
+  line-height: 1.55;
+}
+
+.mr-landing .demo-note strong {
+  display: block;
+  color: var(--white);
+  font-size: 0.94rem;
+  margin-bottom: 0.3rem;
+}
+
+.mr-landing .error {
+  margin-top: 1rem;
+  border-radius: 12px;
+  background: rgba(224, 82, 82, 0.14);
+  border: 1px solid rgba(224, 82, 82, 0.4);
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  color: #ffc9c9;
+}
+
+/* ── Fechamento ─────────────────────────────────────────────────────── */
+.mr-landing .closer {
+  text-align: center;
+}
+
+.mr-landing .closer .lede {
+  margin: 1.3rem auto 0;
+  max-width: 48ch;
+}
+
+.mr-landing footer {
+  border-top: 1px solid var(--hairline);
+  padding-block: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--lilac-dim);
+  font-size: 0.87rem;
+}
+
+.mr-landing .disclaimer {
+  max-width: 60ch;
+  line-height: 1.55;
+}
+
+/* ── Entrada focada (convite / vaga) ────────────────────────────────── */
+/* Quem chega por convite ou link de vaga veio para responder, não para ler
+   marketing: a página inteira vira só o cartão de entrada. */
+.mr-landing.is-focused {
+  display: grid;
+  place-items: center;
+  padding: clamp(1.5rem, 6vw, 4rem) var(--gutter);
+}
+
+.mr-landing.is-focused .signin {
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mr-landing *,
+  .mr-landing *::before,
+  .mr-landing *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
