@@ -3,7 +3,7 @@ from typing import Any
 
 from jose import JWTError, jwt
 
-from app.core.config import settings
+from app.core.config import MOCK_GOOGLE_CLIENT_ID, settings
 
 
 def create_access_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
@@ -25,13 +25,25 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
         return None
 
 
+def _mock_login_allowed(id_token_str: str) -> bool:
+    """O login simulado existe apenas fora de produção.
+
+    Antes bastava o token começar com "mock_google_token": mesmo com um
+    GOOGLE_CLIENT_ID real, qualquer pessoa forjava esse prefixo e recebia um
+    JWT válido de um usuário arbitrário. O corte por ambiente é o que fecha
+    isso — o prefixo sozinho nunca foi uma credencial.
+    """
+    if settings.is_production:
+        return False
+    return id_token_str.startswith("mock_google_token") or settings.GOOGLE_CLIENT_ID == MOCK_GOOGLE_CLIENT_ID
+
+
 def verify_google_id_token(id_token_str: str) -> dict[str, Any]:
     """
     Verifies a Google OAuth2 ID Token.
     Supports real tokens via google.oauth2.id_token, and mock tokens for dev/testing.
     """
-    # Check for mock token in testing or dev environment
-    if id_token_str.startswith("mock_google_token") or settings.GOOGLE_CLIENT_ID == "mock_google_client_id":
+    if _mock_login_allowed(id_token_str):
         # Extract name/email from mock token if embedded, or return default mock payload
         parts = id_token_str.split("_")
         suffix = parts[-1] if len(parts) > 3 else "test"
