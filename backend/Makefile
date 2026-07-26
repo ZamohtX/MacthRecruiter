@@ -17,7 +17,7 @@ help: ## Exibe este menu de ajuda com todos os comandos disponíveis
 
 venv: ## Cria o ambiente virtual local e instala as dependências
 	@test -d .venv || python3 -m venv .venv
-	@.venv/bin/pip install -q -r requirements.txt
+	@.venv/bin/pip install -q -r requirements-dev.txt
 	@echo -e "$(GREEN)Ambiente pronto em .venv$(NC)"
 
 dev-local: venv ## Sobe a API sem Docker, com banco SQLite local (dev e demo)

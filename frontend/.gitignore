@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Cache local do firebase deploy (hashes dos arquivos já publicados)
+.firebase/
 screenshots/
 .env
 .env.local
