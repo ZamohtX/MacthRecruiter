@@ -14,6 +14,26 @@ export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
  */
 export const MOCK_MODE = GOOGLE_CLIENT_ID === "";
 
+const AVATAR_KEY = "matchrecruiter.avatar";
+
+/**
+ * O backend não guarda a foto do Google — só `google_id`. O `id_token` que o
+ * Google entrega é, ele mesmo, um JWT com a claim `picture`; decodificar o
+ * payload no navegador (sem verificar assinatura, que já é validada pelo
+ * backend em `/auth/google`) extrai a foto sem precisar de coluna nova.
+ * Token mock (`mock_google_token_<sufixo>`) não é um JWT — cai no `null`.
+ */
+function decodeGooglePicture(idToken: string): string | null {
+  const parts = idToken.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof payload.picture === "string" ? payload.picture : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface LoginOptions {
   inviteToken?: string | null;
   jobId?: string | null;
@@ -22,6 +42,8 @@ export interface LoginOptions {
 interface AuthState {
   user: User | null;
   loading: boolean;
+  /** Foto de perfil do Google, quando o login veio de lá. `null` em modo mock. */
+  avatarUrl: string | null;
   /** `idToken` é o token do Google, ou `mock_google_token_<sufixo>` em dev. */
   login: (idToken: string, options?: LoginOptions) => Promise<User>;
   logout: () => void;
@@ -35,6 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // aqui em vez de chamar setState no corpo do efeito evita um render em cascata
   // — e um piscar do spinner em toda visita anônima.
   const [loading, setLoading] = useState(() => getToken() !== null);
+  // Persistida à parte do token de acesso: o `access_token` emitido pelo
+  // backend não carrega a claim `picture`, só o id_token original do Google a
+  // tinha — sem isso, a foto sumiria a cada F5.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => localStorage.getItem(AVATAR_KEY));
 
   // Revalida o token guardado na subida: um JWT expirado no localStorage
   // deixaria a UI achar que está logada e falhar em toda chamada.
@@ -68,15 +94,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setToken(response.access_token);
     setUser(response.user);
+
+    const picture = decodeGooglePicture(idToken);
+    if (picture) localStorage.setItem(AVATAR_KEY, picture);
+    else localStorage.removeItem(AVATAR_KEY);
+    setAvatarUrl(picture);
+
     return response.user;
   }, []);
 
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
+    localStorage.removeItem(AVATAR_KEY);
+    setAvatarUrl(null);
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading, login, logout]);
+  const value = useMemo(
+    () => ({ user, loading, avatarUrl, login, logout }),
+    [user, loading, avatarUrl, login, logout],
+  );
 
   return <AuthContext value={value}>{children}</AuthContext>;
 }
