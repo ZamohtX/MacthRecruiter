@@ -5,7 +5,9 @@ import { ApiError } from "../api/client";
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const BUTTON_STYLES: Record<ButtonVariant, string> = {
-  primary: "bg-[var(--seq-fill)] text-white hover:opacity-90",
+  // --seq-fill é o verde da marca — texto escuro (não branco) para manter
+  // contraste sobre um acento tão claro.
+  primary: "bg-[var(--seq-fill)] text-[var(--brand-void)] font-semibold hover:opacity-90",
   secondary: "border border-[var(--hairline)] hover:bg-black/5 dark:hover:bg-white/10",
   ghost: "hover:bg-black/5 dark:hover:bg-white/10",
   danger: "border border-[var(--status-critical)] hover:bg-[var(--status-critical)]/10",

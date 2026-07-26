@@ -15,27 +15,41 @@
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/*
+ * Tema claro e escuro construídos só com a paleta de marca (a mesma do
+ * login/logo): --brand-void, --brand-violet, --brand-violet-light,
+ * --brand-green, --brand-mist. Nenhum tom novo entra aqui — cada token do
+ * tema é um desses cinco, puro ou com opacidade.
+ *
+ * --series-1/2, --diverge-* e --status-* ficam de fora de propósito: são o
+ * sistema de dataviz e de status, validados à parte para contraste e
+ * daltonismo, e não fazem parte da identidade de marca.
+ */
 :root {
   color-scheme: light;
 
-  --surface-1: #fcfcfb;
-  --page-plane: #f9f9f7;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
-  --gridline: #e1e0d9;
-  --baseline: #c3c2b7;
-  --hairline: rgba(11, 11, 11, 0.1);
+  --surface-1: #ffffff;
+  --page-plane: var(--brand-mist);
+  --text-primary: var(--brand-void);
+  --text-secondary: rgba(27, 0, 41, 0.72);
+  /* 0.5 dava 3.74:1 sobre branco — abaixo do mínimo de 4.5:1 (WCAG AA) para
+     texto normal. Subtítulos, hints e datas em toda a tela usam este token, o
+     que fazia a versão clara parecer "lavada". Em 0.62 chega a ~5.7:1. */
+  --text-muted: rgba(27, 0, 41, 0.62);
+  --gridline: rgba(27, 0, 41, 0.12);
+  --baseline: rgba(27, 0, 41, 0.28);
+  --hairline: rgba(27, 0, 41, 0.1);
 
-  /* Categóricas — slot 1 (time) e slot 2 (candidato). */
+  /* Categóricas — slot 1 (time) e slot 2 (candidato). Sistema à parte, não é
+     a paleta de marca: mantido como estava, validado para daltonismo. */
   --series-1: #2a78d6;
   --series-2: #eb6834;
 
-  /* Sequencial azul: track claro para medidores e o passo cheio. */
-  --seq-track: #cde2fb;
-  --seq-fill: #2a78d6;
+  /* Acento interativo (botões primários, foco, medidores) = verde da marca. */
+  --seq-track: #e9e1ed; /* --brand-violet a 12% sobre branco */
+  --seq-fill: var(--brand-green);
 
-  /* Divergente para deltas: azul (sobe) ↔ vermelho (cai), cinza no meio. */
+  /* Divergente para deltas: sistema à parte, mantido como estava. */
   --diverge-pos: #2a78d6;
   --diverge-neg: #e34948;
   --diverge-mid: #f0efec;
@@ -46,25 +60,33 @@
   --status-serious: #ec835a;
   --status-critical: #d03b3b;
   --delta-up-good: #006300;
+
+  /* Marca — fixa nos dois temas, não deriva do claro/escuro. Usada em telas de
+     identidade (login, selo da logo) além de alimentar os tokens acima. */
+  --brand-void: #1b0029;
+  --brand-violet: #4a056d;
+  --brand-violet-light: color-mix(in srgb, var(--brand-violet) 55%, #a855f7 45%);
+  --brand-green: #00ff4c;
+  --brand-mist: #d9d9d9;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --surface-1: #1a1a19;
-  --page-plane: #0d0d0d;
-  --text-primary: #ffffff;
-  --text-secondary: #c3c2b7;
-  --text-muted: #898781;
-  --gridline: #2c2c2a;
-  --baseline: #383835;
-  --hairline: rgba(255, 255, 255, 0.1);
+  --surface-1: color-mix(in srgb, var(--brand-void) 70%, var(--brand-violet) 30%);
+  --page-plane: var(--brand-void);
+  --text-primary: var(--brand-mist);
+  --text-secondary: rgba(217, 217, 217, 0.72);
+  --text-muted: rgba(217, 217, 217, 0.5);
+  --gridline: rgba(217, 217, 217, 0.14);
+  --baseline: rgba(217, 217, 217, 0.3);
+  --hairline: rgba(217, 217, 217, 0.12);
 
   --series-1: #3987e5;
   --series-2: #d95926;
 
-  --seq-track: #184f95;
-  --seq-fill: #3987e5;
+  --seq-track: rgba(74, 5, 109, 0.45);
+  --seq-fill: var(--brand-green);
 
   --diverge-pos: #3987e5;
   --diverge-neg: #e66767;
@@ -81,20 +103,20 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --surface-1: #1a1a19;
-    --page-plane: #0d0d0d;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-    --gridline: #2c2c2a;
-    --baseline: #383835;
-    --hairline: rgba(255, 255, 255, 0.1);
+    --surface-1: color-mix(in srgb, var(--brand-void) 70%, var(--brand-violet) 30%);
+    --page-plane: var(--brand-void);
+    --text-primary: var(--brand-mist);
+    --text-secondary: rgba(217, 217, 217, 0.72);
+    --text-muted: rgba(217, 217, 217, 0.5);
+    --gridline: rgba(217, 217, 217, 0.14);
+    --baseline: rgba(217, 217, 217, 0.3);
+    --hairline: rgba(217, 217, 217, 0.12);
 
     --series-1: #3987e5;
     --series-2: #d95926;
 
-    --seq-track: #184f95;
-    --seq-fill: #3987e5;
+    --seq-track: rgba(74, 5, 109, 0.45);
+    --seq-fill: var(--brand-green);
 
     --diverge-pos: #3987e5;
     --diverge-neg: #e66767;
