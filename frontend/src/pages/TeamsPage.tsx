@@ -55,7 +55,7 @@ export function TeamsPage() {
           </p>
         )}
         <p className="mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
-          Quem cria o time vira responsável e primeiro integrante — o gestor também responde o teste.
+          As melhores contratações começam entendendo quem já faz parte da equipe.
         </p>
       </Card>
 
