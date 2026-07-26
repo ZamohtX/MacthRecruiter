@@ -108,6 +108,36 @@ Três mitigações aplicadas:
 
 Reduz o problema; não o elimina. Validação empírica continua pendente.
 
+#### A camada de jogo — Etapa 5
+
+`app/core/gamification.py`. Os 20 cenários são servidos em **4 níveis de 5**, e cada item vem
+marcado com o nível a que pertence. O instrumento também declara sua duração estimada, então a
+interface não precisa inventar nem os rótulos nem o "faltam ~4 min".
+
+**O agrupamento é de apresentação: não altera o cálculo.** A ordem de resposta continua livre e
+o perfil sai igual a quem responder tudo de uma vez.
+
+> ⚠️ **Não existe "acertou".** Um quiz reforça a resposta certa; aqui todas as condutas são
+> defensáveis e as cargas nunca chegam ao cliente. Um elogio específico à escolha seria a chave
+> de correção vazando, e um elogio genérico a cada tela seria ruído. Então o reforço é de
+> **progresso e ritmo** — quanto falta, qual bloco fechou, há quanto tempo a pessoa responde.
+
+Os rótulos dos níveis descrevem o **tipo de situação** ("Zona cinzenta"), nunca o traço medido.
+Um nível chamado "Disciplina" entregaria a correção do bloco inteiro — há teste garantindo que
+nenhum nome de fator apareça nesse payload.
+
+**Tempo por resposta.** `POST .../answers` aceita um `elapsed_ms` opcional por escolha, gravado
+em `assessment_answers.elapsed_ms`. Serve para dois fins: transformar a duração-alvo de 10–15 min
+de **premissa** em dado observado (§Etapa 5 do documento de visão) e servir de insumo à detecção
+de resposta apressada prevista em §10.4 — quem fecha 20 cenários em 40 segundos não leu nenhum.
+
+O campo é opcional porque script de demo, testes e carga em lote não têm essa medida, e exigi-la
+faria esses clientes inventarem número. Revisar uma escolha **mantém a primeira medida**: reler
+uma tela já conhecida leva segundos e sobrescrever encurtaria artificialmente a duração medida.
+
+Como o tempo vem do cliente, ele **não é confiável para punir ninguém** — serve para calibrar o
+instrumento e levantar suspeita, não para eliminar candidato.
+
 ---
 
 ## 🧮 Como o fit complementar é calculado
@@ -266,20 +296,46 @@ Em desenvolvimento (`GOOGLE_CLIENT_ID=mock_google_client_id`), qualquer token no
 | Método | Rota | Descrição |
 | :--- | :--- | :--- |
 | `GET` | `/api/v1/questionnaires` | Lista os instrumentos disponíveis |
-| `GET` | `/api/v1/questionnaires/default` | Instrumento padrão: 20 cenários com 4 condutas cada, sem as cargas dos fatores |
+| `GET` | `/api/v1/questionnaires/default` | Instrumento padrão: 20 cenários com 4 condutas cada, em 4 níveis, sem as cargas dos fatores |
 | `GET` | `/api/v1/questionnaires/{id}` | Um instrumento específico |
-| `POST` | `/api/v1/questionnaires/{id}/answers` | Envia as condutas escolhidas (`question_id` + `selected_option_id`). Aceita envio parcial; reenviar **troca** a escolha em vez de duplicar |
-| `GET` | `/api/v1/questionnaires/{id}/my-progress` | Progresso + perfil Big Five + soft skills derivadas da própria pessoa |
+| `POST` | `/api/v1/questionnaires/{id}/answers` | Envia as condutas escolhidas (`question_id` + `selected_option_id`, com `elapsed_ms` opcional). Aceita envio parcial; reenviar **troca** a escolha em vez de duplicar |
+| `GET` | `/api/v1/questionnaires/{id}/my-progress` | Progresso por nível + ritmo + perfil Big Five + soft skills derivadas da própria pessoa |
 | `GET` | `/api/v1/questionnaires/{id}/my-answers` | Escolhas já enviadas — permite retomar o teste |
 
 Envio de resposta:
 
 ```jsonc
-{ "answers": [ { "question_id": "…", "selected_option_id": "…" } ] }
+{ "answers": [ { "question_id": "…", "selected_option_id": "…", "elapsed_ms": 24000 } ] }
 ```
 
 Alternativa que não pertence ao cenário informado é rejeitada com **400** — aplicaria cargas
 erradas ao perfil.
+
+O instrumento vem com a camada de jogo declarada, e cada cenário sabe a que nível pertence:
+
+```jsonc
+{
+  "estimated_minutes": 12,
+  "levels": [
+    { "index": 0, "title": "Quando algo aperta", "subtitle": "Prazo curto, sistema fora do ar e conversa difícil.",
+      "first_position": 0, "question_count": 5, "estimated_seconds": 175 }
+  ],
+  "questions": [ { "id": "…", "context": "Prazo e dívida técnica", "level": 0, "options": [ … ] } ]
+}
+```
+
+E o progresso responde "onde eu estou" sem avaliar nenhuma escolha:
+
+```jsonc
+{
+  "answered_questions": 7, "total_questions": 20, "current_level": 1,
+  "levels": [ { "index": 0, "answered_questions": 5, "is_complete": true, … } ],
+  "elapsed_seconds": 260, "estimated_seconds_remaining": 455
+}
+```
+
+`elapsed_seconds` é **nulo**, não zero, quando nenhuma resposta trouxe medida — "não medido" e
+"levou zero segundo" são coisas diferentes.
 
 ### Times — Etapas 1 e 2
 
@@ -458,4 +514,11 @@ Contexto completo em `docs/visao-de-negocio.md`.
   documento de visão e ainda não existe.
 - **Etapas 3, 6 e 7 do fluxo original ausentes**: análise de CV/GitHub, micro-resumo por IA e
   análise de entrevista.
+- **A duração-alvo do teste continua premissa**, agora instrumentada. A estimativa exibida usa
+  `ESTIMATED_SECONDS_PER_SCENARIO = 35` (chute informado, ~12 min para 20 cenários); trocar pela
+  mediana observada em `elapsed_ms` assim que houver volume.
+- **Detecção de resposta apressada não implementada.** O dado bruto passou a ser coletado, mas
+  ninguém o analisa ainda — o limiar e o que fazer com quem cruzá-lo (§10.4) estão em aberto.
+- **Game não adaptativo.** Dificuldade fixa e mesma ordem de itens para todo mundo; a
+  adaptatividade é V2 no roadmap.
 - **Google OAuth em modo mock por padrão.** Trocar `GOOGLE_CLIENT_ID` antes de qualquer uso real.

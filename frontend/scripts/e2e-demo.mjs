@@ -144,7 +144,12 @@ async function seedScenario() {
   });
 
   const ranking = await call(`/jobs/${job.id}/candidates`, { token: boss.access_token });
-  return { boss, member, team, job, ranking, emptyTeam };
+
+  // Integrante que ainda não respondeu nada: é com ele que a mecânica de jogo
+  // (trilha, feedback, checkpoint) pode ser percorrida na interface.
+  const rookie = await login(`novato${stamp}`, { invite_token: invite.invite_token });
+
+  return { boss, member, rookie, team, job, ranking, emptyTeam };
 }
 
 async function main() {
@@ -152,7 +157,7 @@ async function main() {
   await loadKey();
 
   console.log("→ montando o cenário via API…");
-  const { boss, member, team, job, ranking, emptyTeam } = await seedScenario();
+  const { boss, member, rookie, team, job, ranking, emptyTeam } = await seedScenario();
   console.log(`  time=${team.id}`);
   console.log(`  vaga=${job.id}`);
   for (const candidate of ranking) {
@@ -216,6 +221,45 @@ async function main() {
   await memberPage.screenshot({ path: `${SHOTS}/05-teste-integrante.png`, fullPage: true });
   console.log("  ✓ 05-teste-integrante.png");
   await memberContext.close();
+
+  // Primeiro nível respondido pela interface.
+  //
+  // O resto deste script responde o teste pela API, que é rápido mas passa ao
+  // largo da camada de jogo. Trilha de níveis, confirmação de escolha e
+  // checkpoint só existem na tela — sem clicar, ninguém verifica que funcionam.
+  const gameContext = await browser.newContext({ viewport: { width: 1280, height: 1000 }, deviceScaleFactor: 2 });
+  const gamePage = await gameContext.newPage();
+  gamePage.on("console", (message) => {
+    if (message.type() === "error") failures.push(`[console jogo] ${message.text()}`);
+  });
+  gamePage.on("pageerror", (error) => failures.push(`[pageerror jogo] ${error.message}`));
+  await gamePage.addInitScript((token) => localStorage.setItem("matchrecruiter.token", token), rookie.access_token);
+  await gamePage.goto(`${BASE}/meu-teste`, { waitUntil: "networkidle" });
+
+  const LEVEL_SIZE = 5;
+  for (let scenario = 1; scenario <= LEVEL_SIZE; scenario += 1) {
+    await gamePage.waitForSelector(`text=${scenario} de 20`, { timeout: 15_000 });
+    if (scenario === 1) {
+      await gamePage.screenshot({ path: `${SHOTS}/08-teste-nivel-1.png`, fullPage: true });
+    }
+    // `click` e não `check`: o avanço automático troca o cenário logo depois de
+    // salvar, e `check` falharia ao reconferir o estado de um campo que já saiu
+    // da tela. O clique espera o campo ficar habilitado, que é o que importa —
+    // durante o salvamento o fieldset inteiro fica desabilitado.
+    await gamePage.locator('fieldset input[type="radio"]').first().click();
+  }
+
+  // Fechar o quinto cenário tem que abrir o checkpoint, não o sexto cenário.
+  await gamePage.waitForSelector("text=Nível 1 concluído", { timeout: 15_000 });
+  await gamePage.screenshot({ path: `${SHOTS}/09-checkpoint.png`, fullPage: true });
+  console.log("  ✓ 08-teste-nivel-1.png / 09-checkpoint.png");
+
+  await gamePage.getByRole("button", { name: "Continuar" }).click();
+  // Continuar precisa cair no primeiro cenário em aberto do bloco seguinte.
+  await gamePage.waitForSelector("text=Nível 2 de 4", { timeout: 15_000 });
+  await gamePage.waitForSelector("text=6 de 20", { timeout: 15_000 });
+  console.log("  ✓ checkpoint → nível 2 no cenário 6");
+  await gameContext.close();
 
   // Tela do candidato: sessão própria, sem os privilégios do recrutador.
   const candidateContext = await browser.newContext({ viewport: { width: 1280, height: 1000 }, deviceScaleFactor: 2 });

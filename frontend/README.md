@@ -66,7 +66,7 @@ Com um client ID configurado, a mesma tela carrega o Google Identity Services e 
 | `/times/:id` | recrutador | Diagnóstico do time, perfil-alvo por lacuna, convite, abrir vaga |
 | `/vagas` · `/vagas/:id` | recrutador | Vagas e ranking de candidatos |
 | `/vagas/:id/candidatos/:id` | recrutador | Simulação pós-contratação e decisão |
-| `/meu-teste` | integrante do time | Responde o teste situacional (o recrutador não vê este link) |
+| `/meu-teste` | integrante do time | Responde o teste situacional em níveis (o recrutador não vê este link) |
 | `/convite/:token` | convidado | Entra no time e vai ao teste |
 | `/vaga/:id` | candidato | Candidata-se e responde o teste |
 
@@ -78,6 +78,39 @@ não vê "Meu teste" — ele administra o diagnóstico sem responder a ele.
 **O teste é respondido um cenário por vez**, com salvamento a cada escolha. Fechar a aba no
 cenário 15 não perde nada — as respostas já enviadas são carregadas de volta e o teste retoma de
 onde parou.
+
+### A gamificação não diz se você acertou
+
+Os 20 cenários vêm em **4 níveis de 5**. A tela mostra trilha de níveis, barra de conclusão,
+sequência da sessão, tempo restante estimado e uma tela de checkpoint entre um nível e o próximo.
+O que ela nunca mostra é avaliação da escolha.
+
+Isso não é uma versão pobre da mecânica — é a única compatível com o instrumento. Um quiz reforça
+a resposta certa; aqui **todas as condutas são defensáveis** e as cargas nunca chegam ao
+navegador. "Boa escolha!" precisaria de uma alternativa correta, que o SJT existe justamente para
+não ter; um elogio específico seria a chave de correção vazando e um elogio genérico a cada tela
+seria ruído. Então o reforço é de **progresso e ritmo**: o ✓ confirma que a escolha foi salva,
+não que ela foi boa.
+
+| Mecânica | Como aparece | Por quê |
+| :--- | :--- | :--- |
+| **Níveis** | Trilha de pontos agrupados, título do bloco atual | Divide 20 cenários em quatro trechos com fim visível |
+| **Checkpoint** | Tela entre níveis: respondidos, tempo, o que vem | Ponto de parada explícito — quem cansa fecha a aba num limite marcado e volta |
+| **Feedback imediato** | "✓ Escolha registrada" e a bolinha preenchendo | Confirma o salvamento antes de avançar |
+| **Sequência** | Pilha "N seguidos", a partir de 2 | Ritmo da sessão. Zera ao recarregar — não há mérito acumulado a preservar |
+| **Barra de conclusão** | Respondidos / total, e ~min restantes | O fim precisa ser visível a cada passo |
+
+Os rótulos dos níveis e a estimativa de tempo **vêm do backend**, não do frontend: se o banco de
+itens crescer, a trilha acompanha sozinha em vez de a interface manter uma cópia desatualizada.
+
+A trilha não depende de cor para se explicar: o resumo em texto diz o nível e a contagem, cada
+ponto tem rótulo acessível próprio, o cenário atual ganha um anel (não outro tom de azul) e o
+nível concluído recebe "✓".
+
+**O tempo de cada cenário é enviado ao backend.** A duração-alvo de 10–15 minutos é uma premissa
+do documento de visão, e medir é o que a transforma em dado. Medidas acima de 5 minutos são
+descartadas em vez de enviadas — aba aberta e esquecida não é tempo de leitura, e um outlier de
+40 minutos estragaria a estatística.
 
 **As cargas dos fatores nunca chegam ao navegador.** A API entrega apenas o texto das alternativas.
 Se o respondente visse que uma opção pontua Conscienciosidade, escolheria pelo rótulo — que é
@@ -130,7 +163,11 @@ tendências de traço coerentes — a API não expõe essa chave, e é assim de 
 ## Limitações conhecidas
 
 - **Sem testes automatizados de componente.** A verificação hoje é o percurso end-to-end acima,
-  que cobre integração e regressão visual, mas não casos de borda de cada componente.
+  que cobre integração e regressão visual, mas não casos de borda de cada componente. A trilha de
+  níveis e o checkpoint entram nessa lacuna: o e2e responde o teste pela API, então passa ao
+  largo da mecânica de jogo na tela.
+- **Sem adaptatividade.** Mesma ordem de cenários e mesma dificuldade para todo mundo —
+  a adaptatividade é V2 no roadmap.
 - **Sem paginação no ranking.** Uma vaga com centenas de candidatos renderiza a lista inteira.
 - **Sem feedback ao candidato reprovado** — previsto na V2 do documento de visão.
 - **`localStorage` para o token.** Simples e suficiente para o MVP; um cookie `HttpOnly` é o

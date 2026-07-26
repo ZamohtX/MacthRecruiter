@@ -42,6 +42,16 @@ class Settings(BaseSettings):
     # paralelo o seed correria contra si mesmo a cada escala.
     AUTO_SEED: bool = True
 
+    # Integração com a API pública de Desenvolvedores do OxeTech Academy.
+    # O token é emitido uma única vez no painel do Academy e mora só no .env —
+    # nunca no código. Sem token a integração fica inerte (o produto continua
+    # funcionando sem ela). Ver app/integrations/academy/.
+    ACADEMY_API_BASE_URL: str = "https://oxetech.al.gov.br/api/dev/v1"
+    ACADEMY_API_TOKEN: str = ""
+    # Teto de segurança para não estourar o limite de 120 req/min da API ao
+    # paginar o pool de talentos.
+    ACADEMY_MAX_ALUNOS: int = 100
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property

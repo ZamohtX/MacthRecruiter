@@ -115,13 +115,24 @@ curl -s -X POST "localhost:8000/api/v1/questionnaires/$QID/answers" \
     "answered_questions": 20, "total_questions": 20, "is_complete": true,
     "missing_question_ids": [],
     "trait_scores": { "Abertura à Experiência": 5.0, "Amabilidade": 1.0, … },
-    "dimension_scores": { "Criatividade e Inovação": 4.04, "Colaboração": 1.24, … }
+    "dimension_scores": { "Criatividade e Inovação": 4.04, "Colaboração": 1.24, … },
+    "levels": [ { "index": 0, "title": "Quando algo aperta", "answered_questions": 5, "is_complete": true, … } ],
+    "current_level": 3, "elapsed_seconds": null, "estimated_seconds_remaining": 0
   }
 }
 ```
 
 **Envio parcial é aceito** — o teste pode ser respondido em etapas, e `missing_question_ids` diz
 o que falta. **Reenviar troca** a escolha em vez de acumular respostas.
+
+O bloco `levels` é a camada de jogo da Etapa 5: os 20 cenários são apresentados em 4 níveis de 5,
+com checkpoint entre eles. **É agrupamento de apresentação** — a ordem de resposta continua livre
+e o perfil sai idêntico ao de quem responde tudo de uma vez.
+
+Cada escolha aceita um `elapsed_ms` opcional, que a interface envia e clientes de API (como este
+passo a passo) omitem — daí `elapsed_seconds: null` acima, que significa "não medido", não "levou
+zero". O tempo existe para tirar a duração-alvo de 10–15 min do campo da premissa e para alimentar
+a detecção de resposta apressada de §10.4.
 
 Duas validações protegem o perfil: cenário que não pertence ao instrumento informado e
 alternativa que não pertence ao cenário são ambos rejeitados com **400** — aplicariam cargas
@@ -328,6 +339,7 @@ possam ser comparadas entre empresas.
 ## O que este fluxo ainda não cobre
 
 Etapas 3, 6 e 7 do fluxo descrito em `visao-de-negocio.md` — análise de CV/GitHub, micro-resumo
-gerado por IA e análise de entrevista — não estão implementadas. As limitações de método
-(instrumento não validado, ipsatividade, banco de 20 cenários, agregação por média) estão
-listadas em `backend/README.md`.
+gerado por IA e análise de entrevista — não estão implementadas. Da Etapa 5, falta a
+**adaptatividade**, que o próprio documento coloca na V2. As limitações de método (instrumento
+não validado, ipsatividade, banco de 20 cenários, agregação por média) estão listadas em
+`backend/README.md`.
