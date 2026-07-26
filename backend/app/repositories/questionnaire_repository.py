@@ -4,7 +4,25 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.questionnaire import AssessmentAnswer, Question, Questionnaire
+from app.models.questionnaire import (
+    AssessmentAnswer,
+    Question,
+    Questionnaire,
+    QuestionOption,
+)
+
+# Carrega o instrumento inteiro — itens, alternativas e cargas nos fatores.
+# Sem as cargas não é possível pontuar uma resposta, e lazy loading em sessão
+# async estoura, então o eager load é obrigatório e não uma otimização.
+_FULL_QUESTIONNAIRE = (
+    selectinload(Questionnaire.questions).selectinload(Question.options).selectinload(QuestionOption.loadings)
+)
+
+# Idem para respostas: a alternativa escolhida só vale com suas cargas.
+_ANSWER_WITH_LOADINGS = (
+    selectinload(AssessmentAnswer.question).selectinload(Question.options).selectinload(QuestionOption.loadings),
+    selectinload(AssessmentAnswer.selected_option).selectinload(QuestionOption.loadings),
+)
 
 
 class QuestionnaireRepository:
@@ -12,64 +30,101 @@ class QuestionnaireRepository:
         self.db = db
 
     async def get_by_id(self, questionnaire_id: UUID) -> Questionnaire | None:
-        stmt = (
-            select(Questionnaire)
-            .options(selectinload(Questionnaire.questions))
-            .where(Questionnaire.id == questionnaire_id)
-        )
+        stmt = select(Questionnaire).options(_FULL_QUESTIONNAIRE).where(Questionnaire.id == questionnaire_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def create_questionnaire(self, title: str, description: str | None = None) -> Questionnaire:
-        q = Questionnaire(title=title, description=description)
+    async def list_all(self) -> list[Questionnaire]:
+        stmt = select(Questionnaire).options(_FULL_QUESTIONNAIRE).order_by(Questionnaire.title)
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_default(self) -> Questionnaire | None:
+        stmt = select(Questionnaire).options(_FULL_QUESTIONNAIRE).where(Questionnaire.is_default.is_(True))
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    async def create_questionnaire(
+        self, title: str, description: str | None = None, is_default: bool = False
+    ) -> Questionnaire:
+        q = Questionnaire(title=title, description=description, is_default=is_default)
         self.db.add(q)
         await self.db.commit()
         await self.db.refresh(q)
         return q
 
-    async def add_question(self, questionnaire_id: UUID, dimension: str, text: str) -> Question:
-        question = Question(questionnaire_id=questionnaire_id, dimension=dimension, text=text)
-        self.db.add(question)
-        await self.db.commit()
-        await self.db.refresh(question)
-        return question
-
-    async def save_answer(self, user_id: UUID, question_id: UUID, score: int) -> AssessmentAnswer:
-        # Check if answer exists and update, or insert new
-        stmt = select(AssessmentAnswer).where(
-            AssessmentAnswer.user_id == user_id,
-            AssessmentAnswer.question_id == question_id,
+    async def get_questions(self, questionnaire_id: UUID) -> list[Question]:
+        stmt = (
+            select(Question)
+            .options(selectinload(Question.options).selectinload(QuestionOption.loadings))
+            .where(Question.questionnaire_id == questionnaire_id)
+            .order_by(Question.position, Question.id)
         )
         result = await self.db.execute(stmt)
-        existing = result.scalar_one_or_none()
-        if existing:
-            existing.score = score
-            await self.db.commit()
-            await self.db.refresh(existing)
-            return existing
+        return list(result.scalars().all())
 
-        answer = AssessmentAnswer(user_id=user_id, question_id=question_id, score=score)
-        self.db.add(answer)
+    async def get_options_by_ids(self, option_ids: list[UUID]) -> list[QuestionOption]:
+        if not option_ids:
+            return []
+        stmt = (
+            select(QuestionOption)
+            .options(selectinload(QuestionOption.loadings))
+            .where(QuestionOption.id.in_(option_ids))
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def save_answers(self, user_id: UUID, options_by_question: dict[UUID, UUID]) -> list[AssessmentAnswer]:
+        """Insere ou atualiza várias escolhas em uma única transação.
+
+        Uma submissão parcialmente gravada deixaria o perfil do respondente
+        inconsistente, então tudo entra ou nada entra.
+        """
+        if not options_by_question:
+            return []
+
+        stmt = select(AssessmentAnswer).where(
+            AssessmentAnswer.user_id == user_id,
+            AssessmentAnswer.question_id.in_(list(options_by_question)),
+        )
+        result = await self.db.execute(stmt)
+        existing = {a.question_id: a for a in result.scalars().all()}
+
+        saved: list[AssessmentAnswer] = []
+        for question_id, option_id in options_by_question.items():
+            answer = existing.get(question_id)
+            if answer is None:
+                answer = AssessmentAnswer(user_id=user_id, question_id=question_id, selected_option_id=option_id)
+                self.db.add(answer)
+            else:
+                answer.selected_option_id = option_id
+            saved.append(answer)
+
         await self.db.commit()
-        await self.db.refresh(answer)
-        return answer
+        return saved
 
     async def get_user_answers(self, user_id: UUID) -> list[AssessmentAnswer]:
-        stmt = (
-            select(AssessmentAnswer)
-            .options(selectinload(AssessmentAnswer.question))
-            .where(AssessmentAnswer.user_id == user_id)
-        )
+        stmt = select(AssessmentAnswer).options(*_ANSWER_WITH_LOADINGS).where(AssessmentAnswer.user_id == user_id)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
     async def get_users_answers(self, user_ids: list[UUID]) -> list[AssessmentAnswer]:
         if not user_ids:
             return []
+        stmt = select(AssessmentAnswer).options(*_ANSWER_WITH_LOADINGS).where(AssessmentAnswer.user_id.in_(user_ids))
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_user_answers_for_questionnaire(self, user_id: UUID, questionnaire_id: UUID) -> list[AssessmentAnswer]:
         stmt = (
             select(AssessmentAnswer)
-            .options(selectinload(AssessmentAnswer.question))
-            .where(AssessmentAnswer.user_id.in_(user_ids))
+            .options(*_ANSWER_WITH_LOADINGS)
+            .join(Question, Question.id == AssessmentAnswer.question_id)
+            .where(
+                AssessmentAnswer.user_id == user_id,
+                Question.questionnaire_id == questionnaire_id,
+            )
+            .order_by(Question.position)
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())

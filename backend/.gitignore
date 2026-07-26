@@ -55,3 +55,6 @@ htmlcov/
 # Database
 *.sqlite
 *.db
+
+# Banco SQLite do modo dev-local
+matchrecruiter.db

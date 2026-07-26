@@ -70,6 +70,29 @@ class JobRepository:
             select(CandidateApplication)
             .options(selectinload(CandidateApplication.candidate))
             .where(CandidateApplication.job_id == job_id)
+            .order_by(CandidateApplication.applied_at)
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_jobs_for_teams(self, team_ids: list[UUID]) -> list[Job]:
+        if not team_ids:
+            return []
+        stmt = (
+            select(Job)
+            .options(selectinload(Job.team), selectinload(Job.questionnaire))
+            .where(Job.team_id.in_(team_ids))
+            .order_by(Job.created_at.desc())
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_applications_for_candidate(self, candidate_id: UUID) -> list[CandidateApplication]:
+        stmt = (
+            select(CandidateApplication)
+            .options(selectinload(CandidateApplication.job))
+            .where(CandidateApplication.candidate_id == candidate_id)
+            .order_by(CandidateApplication.applied_at.desc())
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())

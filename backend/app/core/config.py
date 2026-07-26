@@ -13,6 +13,14 @@ class Settings(BaseSettings):
 
     GOOGLE_CLIENT_ID: str = "mock_google_client_id"
 
+    # Origens permitidas no CORS. "*" apenas para desenvolvimento — com
+    # allow_credentials=True o navegador rejeita o wildcard em produção.
+    CORS_ORIGINS: list[str] = ["*"]
+
+    # Cria/atualiza o questionário padrão na subida da aplicação. Sem ele não há
+    # nenhuma pergunta cadastrada e o fluxo inteiro fica inutilizável.
+    AUTO_SEED: bool = True
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 

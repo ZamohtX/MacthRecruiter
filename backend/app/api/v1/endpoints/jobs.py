@@ -7,14 +7,22 @@ from app.core.deps import get_current_user, get_db
 from app.models.job import ApplicationStatus
 from app.models.user import User
 from app.repositories.job_repository import JobRepository
-from app.repositories.questionnaire_repository import QuestionnaireRepository
 from app.schemas.job import (
+    ApplicationResponse,
+    ApplicationStatusUpdate,
     CandidateSummaryResponse,
     ImpactAnalysisResponse,
     JobCreate,
+    JobDetailResponse,
     JobResponse,
 )
-from app.schemas.questionnaire import QuestionnaireSubmitRequest
+from app.schemas.questionnaire import (
+    AssessmentProgressResponse,
+    QuestionnaireResponse,
+    QuestionnaireSubmitRequest,
+    SubmitAnswersResponse,
+)
+from app.services.assessment_service import AssessmentService
 from app.services.recruitment_service import RecruitmentService
 from app.services.soft_skills_service import SoftSkillsService
 
@@ -27,13 +35,50 @@ async def create_job(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    job_repo = JobRepository(db)
-    return await job_repo.create_job(
+    """Abre uma vaga para um time. Sem `questionnaire_id`, usa o instrumento padrão."""
+    service = RecruitmentService(db)
+    return await service.create_job(
+        user=current_user,
         title=payload.title,
         team_id=payload.team_id,
         questionnaire_id=payload.questionnaire_id,
         description=payload.description,
     )
+
+
+@router.get("", response_model=list[JobResponse])
+async def list_my_jobs(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Vagas dos times de que a pessoa autenticada é responsável."""
+    service = RecruitmentService(db)
+    return await service.list_jobs_for_user(current_user)
+
+
+@router.get("/{job_id}", response_model=JobDetailResponse)
+async def get_job(
+    job_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Detalhe da vaga. Visível ao candidato — não expõe dado de outros candidatos."""
+    service = RecruitmentService(db)
+    return await service.get_job_detail(job_id)
+
+
+@router.get("/{job_id}/questionnaire", response_model=QuestionnaireResponse)
+async def get_job_questionnaire(
+    job_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Instrumento que o candidato desta vaga deve responder — o mesmo aplicado ao time."""
+    recruitment = RecruitmentService(db)
+    job = await recruitment.get_job_or_404(job_id)
+
+    assessment = AssessmentService(db)
+    return QuestionnaireResponse.from_model(await assessment.get_questionnaire_or_404(job.questionnaire_id))
 
 
 @router.post("/{job_id}/apply", status_code=201)
@@ -42,49 +87,57 @@ async def apply_to_job(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    service = RecruitmentService(db)
+    await service.get_job_or_404(job_id)
+
     job_repo = JobRepository(db)
-    job = await job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job with ID {job_id} not found",
-        )
     application = await job_repo.create_application(job_id=job_id, candidate_id=current_user.id)
     return {"message": "Applied successfully", "application_id": str(application.id)}
 
 
-@router.post("/{job_id}/answers", status_code=200)
+@router.post("/{job_id}/answers", response_model=SubmitAnswersResponse, status_code=200)
 async def submit_questionnaire_answers(
     job_id: UUID,
     payload: QuestionnaireSubmitRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Etapa 5 — o candidato responde o mesmo teste que o time respondeu.
+
+    A candidatura só passa a `SOFT_SKILLS_COMPLETED` quando todos os itens forem
+    respondidos; antes disso o perfil está incompleto e não deve ser comparado.
+    """
+    recruitment = RecruitmentService(db)
+    job = await recruitment.get_job_or_404(job_id)
+
+    assessment = AssessmentService(db)
+    saved, progress = await assessment.submit_answers(current_user.id, job.questionnaire_id, payload.answers)
+
     job_repo = JobRepository(db)
-    job = await job_repo.get_by_id(job_id)
-    if not job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job with ID {job_id} not found",
-        )
+    application = await job_repo.get_application(job_id, current_user.id)
+    if application and progress.is_complete and application.status == ApplicationStatus.APPLIED:
+        await job_repo.update_application_status(application, ApplicationStatus.SOFT_SKILLS_COMPLETED)
 
-    quest_repo = QuestionnaireRepository(db)
-    saved_answers = []
-    for ans in payload.answers:
-        res = await quest_repo.save_answer(user_id=current_user.id, question_id=ans.question_id, score=ans.score)
-        saved_answers.append(res)
+    return SubmitAnswersResponse(
+        message="Answers submitted successfully",
+        questionnaire_id=job.questionnaire_id,
+        saved_answers=saved,
+        progress=progress,
+    )
 
-    # Update application status if applicable
-    app = await job_repo.get_application(job_id, current_user.id)
-    if app:
-        from app.models.job import ApplicationStatus
 
-        await job_repo.update_application_status(app, ApplicationStatus.SOFT_SKILLS_COMPLETED)
+@router.get("/{job_id}/my-progress", response_model=AssessmentProgressResponse)
+async def get_my_job_progress(
+    job_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Progresso do próprio candidato no teste desta vaga."""
+    recruitment = RecruitmentService(db)
+    job = await recruitment.get_job_or_404(job_id)
 
-    return {
-        "message": "Answers submitted successfully",
-        "total_answers": len(saved_answers),
-    }
+    assessment = AssessmentService(db)
+    return await assessment.get_progress(current_user.id, job.questionnaire_id)
 
 
 @router.get("/{job_id}/candidates", response_model=list[CandidateSummaryResponse])
@@ -101,8 +154,11 @@ async def get_job_candidates(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    recruitment_service = RecruitmentService(db)
-    return await recruitment_service.get_job_candidates(
+    """Painel do recrutador: candidatos ranqueados por fit complementar."""
+    service = RecruitmentService(db)
+    await service.ensure_job_owner(job_id, current_user)
+
+    return await service.get_job_candidates(
         job_id=job_id, min_fit_score=min_fit_score, status_filter=status_filter, limit=limit, sort_desc=sort_desc
     )
 
@@ -117,5 +173,49 @@ async def get_candidate_impact_analysis(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """Simulação pós-contratação: o que muda no perfil do time se este candidato entrar."""
+    recruitment = RecruitmentService(db)
+    await recruitment.ensure_job_owner(job_id, current_user)
+
     soft_skills_service = SoftSkillsService(db)
     return await soft_skills_service.calculate_impact_analysis(job_id=job_id, candidate_id=candidate_id)
+
+
+@router.patch(
+    "/{job_id}/candidates/{candidate_id}/status",
+    response_model=ApplicationResponse,
+)
+async def update_candidate_status(
+    job_id: UUID,
+    candidate_id: UUID,
+    payload: ApplicationStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Move a candidatura no funil (UNDER_REVIEW, REJECTED, HIRED...)."""
+    service = RecruitmentService(db)
+    await service.ensure_job_owner(job_id, current_user)
+    return await service.update_application_status(job_id, candidate_id, payload.status)
+
+
+@router.post("/{job_id}/candidates/{candidate_id}/hire", response_model=ApplicationResponse)
+async def hire_candidate(
+    job_id: UUID,
+    candidate_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Efetiva a contratação: marca como HIRED e adiciona a pessoa ao time.
+
+    A partir daí o candidato passa a compor o perfil do time — a simulação vira
+    o diagnóstico real e o ciclo recomeça na próxima vaga.
+    """
+    service = RecruitmentService(db)
+    job = await service.ensure_job_owner(job_id, current_user)
+
+    application = await service.update_application_status(job_id, candidate_id, ApplicationStatus.HIRED)
+    await service.team_repo.add_member(job.team_id, candidate_id)
+
+    if application is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+    return application
