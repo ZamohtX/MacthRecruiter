@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     # paginar o pool de talentos.
     ACADEMY_MAX_ALUNOS: int = 100
 
+    # Google Gemini — resumo do candidato em linguagem simples. A chave mora só no
+    # .env (segredo). Sem chave, o endpoint devolve um resumo-regra (fallback), o
+    # produto segue funcionando. Ver app/integrations/gemini/.
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property

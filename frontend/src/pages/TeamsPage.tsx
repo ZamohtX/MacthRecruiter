@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 
 import { api } from "../api/client";
-import { Button, Card, EmptyState, ErrorState, Input, PageTitle, Spinner } from "../components/ui";
+import { Button, Card, ConfirmButton, EmptyState, ErrorState, Input, PageTitle, Spinner } from "../components/ui";
 
 export function TeamsPage() {
   const queryClient = useQueryClient();
@@ -17,6 +17,11 @@ export function TeamsPage() {
       setName("");
       void queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
+  });
+
+  const removeTeam = useMutation({
+    mutationFn: (teamId: string) => api.teams.remove(teamId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["teams"] }),
   });
 
   return (
@@ -71,19 +76,25 @@ export function TeamsPage() {
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2">
             {teams.data.map((team) => (
-              <li key={team.id}>
-                <Link
-                  to={`/times/${team.id}`}
-                  className="block rounded-xl p-4 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.06]"
-                  style={{ background: "var(--surface-1)", border: "1px solid var(--hairline)" }}
-                >
-                  <p className="font-medium" style={{ color: "var(--text-primary)" }}>
+              <li
+                key={team.id}
+                className="flex items-center justify-between gap-3 rounded-xl p-4"
+                style={{ background: "var(--surface-1)", border: "1px solid var(--hairline)" }}
+              >
+                <Link to={`/times/${team.id}`} className="min-w-0 flex-1">
+                  <p className="truncate font-medium" style={{ color: "var(--text-primary)" }}>
                     {team.name}
                   </p>
                   <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
                     Criado em {new Date(team.created_at).toLocaleDateString("pt-BR")}
                   </p>
                 </Link>
+                <ConfirmButton
+                  label="Excluir"
+                  confirmLabel="Excluir o time?"
+                  disabled={removeTeam.isPending}
+                  onConfirm={() => removeTeam.mutate(team.id)}
+                />
               </li>
             ))}
           </ul>

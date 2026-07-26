@@ -93,6 +93,7 @@ def answers_for_preference(
 @dataclass
 class RankedCandidate:
     aluno_id: int
+    candidate_id: UUID
     name: str
     techs: list[str]
     fit_score: float
@@ -107,6 +108,8 @@ class RankedCandidate:
 @dataclass
 class SimulationResult:
     source: str  # "academy_api" | "synthetic"
+    team_id: UUID
+    job_id: UUID
     team_name: str
     job_title: str
     team_members: list[str]
@@ -155,6 +158,7 @@ class AcademyMatchSimulator:
         job_title: str = "Pessoa Desenvolvedora — vaga complementar",
         source: str = "academy_api",
         seed: int = 42,
+        owner: User | None = None,
     ) -> SimulationResult:
         if len(alunos) < team_size + 1:
             raise ValueError(
@@ -167,8 +171,11 @@ class AcademyMatchSimulator:
         candidate_alunos = pool[team_size:]
 
         # O responsável pela vaga é de RH e não integra o time diagnosticado —
-        # ver docstring de teams.create_team.
-        recruiter = await self._recruiter(seed)
+        # ver docstring de teams.create_team. Quando o chamador informa um `owner`
+        # (o recrutador logado que disparou a geração), o time e a vaga passam a
+        # pertencer a ele, para aparecerem nas telas normais do produto; sem
+        # `owner`, cai no recrutador sintético (demo/testes seguem iguais).
+        recruiter = owner if owner is not None else await self._recruiter(seed)
         team = await self.team_repo.create_team(name=team_name, owner_id=recruiter.id)
 
         for aluno in team_alunos:
@@ -202,6 +209,7 @@ class AcademyMatchSimulator:
             ranked.append(
                 RankedCandidate(
                     aluno_id=aluno.id,
+                    candidate_id=candidate.id,
                     name=aluno.display_name,
                     techs=aluno.techs,
                     fit_score=impact.fit_score,
@@ -220,6 +228,8 @@ class AcademyMatchSimulator:
 
         return SimulationResult(
             source=source,
+            team_id=team.id,
+            job_id=job.id,
             team_name=team_name,
             job_title=job_title,
             team_members=[a.display_name for a in team_alunos],

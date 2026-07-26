@@ -1,6 +1,8 @@
+import { useId, useState } from "react";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 
 import { ApiError } from "../api/client";
+import { GLOSSARY } from "./glossary";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -197,5 +199,121 @@ export function ProgressBar({ value, max, label }: { value: number; max: number;
         />
       </div>
     </div>
+  );
+}
+
+/**
+ * Botão de exclusão em dois passos. O primeiro clique não apaga nada — troca para
+ * "Confirmar? Sim / Não". Evita `confirm()` nativo (feio, fora do tema) e o peso de
+ * um modal, mantendo a ação destrutiva atrás de uma confirmação explícita.
+ */
+export function ConfirmButton({
+  onConfirm,
+  label = "Excluir",
+  confirmLabel = "Confirmar exclusão?",
+  disabled,
+  className = "",
+}: {
+  onConfirm: () => void;
+  label?: string;
+  confirmLabel?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+
+  if (!armed) {
+    return (
+      <Button variant="danger" disabled={disabled} className={className} onClick={() => setArmed(true)}>
+        {label}
+      </Button>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
+        {confirmLabel}
+      </span>
+      <Button
+        variant="danger"
+        disabled={disabled}
+        onClick={() => {
+          setArmed(false);
+          onConfirm();
+        }}
+      >
+        Sim
+      </Button>
+      <Button variant="ghost" onClick={() => setArmed(false)}>
+        Não
+      </Button>
+    </span>
+  );
+}
+
+/**
+ * Bloco recolhível para a "análise completa" — a divulgação progressiva mantém a
+ * conclusão à vista e guarda aqui o aprofundamento. Baseado em `<details>` para
+ * herdar acessibilidade e funcionar sem estado externo.
+ */
+export function Disclosure({
+  summary,
+  children,
+  defaultOpen = false,
+}: {
+  summary: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details open={defaultOpen} className="group">
+      <summary
+        className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-1 py-2 text-sm font-medium select-none"
+        style={{ color: "var(--text-secondary)" }}
+      >
+        <span aria-hidden className="transition-transform group-open:rotate-90">
+          ▸
+        </span>
+        {summary}
+      </summary>
+      <div className="mt-3 space-y-6">{children}</div>
+    </details>
+  );
+}
+
+/**
+ * "?" ao lado de um termo, com a definição curta do glossário. Mostra no hover e no
+ * foco (teclado), e o texto vai no `title` nativo como reforço. O termo em si
+ * continua visível; o InfoTip só explica.
+ */
+export function InfoTip({ term }: { term: keyof typeof GLOSSARY }) {
+  const definition = GLOSSARY[term];
+  const id = useId();
+
+  return (
+    <span className="group relative inline-flex">
+      <button
+        type="button"
+        aria-label={`O que é ${term}`}
+        aria-describedby={id}
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] leading-none"
+        style={{ border: "1px solid var(--baseline)", color: "var(--text-muted)" }}
+      >
+        ?
+      </button>
+      <span
+        id={id}
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1 w-56 -translate-x-1/2 rounded-lg p-2 text-xs opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+        style={{
+          background: "var(--surface-1)",
+          border: "1px solid var(--hairline)",
+          color: "var(--text-secondary)",
+        }}
+      >
+        {definition}
+      </span>
+    </span>
   );
 }

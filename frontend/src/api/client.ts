@@ -1,4 +1,5 @@
 import type {
+  AiSummaryResponse,
   AnswerSubmission,
   Application,
   ApplicationStatus,
@@ -9,6 +10,8 @@ import type {
   Job,
   JobDetail,
   Questionnaire,
+  SimulateTeamRequest,
+  SimulateTeamResponse,
   SubmitAnswersResponse,
   Team,
   TeamDiagnosticStatus,
@@ -90,6 +93,9 @@ export const api = {
   teams: {
     list: () => request<Team[]>("/teams"),
     create: (name: string) => post<Team>("/teams", { name }),
+    remove: (teamId: string) => request<void>(`/teams/${teamId}`, { method: "DELETE" }),
+    removeMember: (teamId: string, userId: string) =>
+      request<void>(`/teams/${teamId}/members/${userId}`, { method: "DELETE" }),
     invite: (teamId: string) => post<TeamInvite>(`/teams/${teamId}/invites`),
     profile: (teamId: string) => request<TeamProfile>(`/teams/${teamId}/soft-skills-profile`),
     diagnosticStatus: (teamId: string) =>
@@ -111,6 +117,9 @@ export const api = {
     create: (payload: { title: string; description?: string | null; team_id: string }) =>
       post<Job>("/jobs", payload),
     get: (jobId: string) => request<JobDetail>(`/jobs/${jobId}`),
+    remove: (jobId: string) => request<void>(`/jobs/${jobId}`, { method: "DELETE" }),
+    removeApplication: (jobId: string, candidateId: string) =>
+      request<void>(`/jobs/${jobId}/candidates/${candidateId}`, { method: "DELETE" }),
     questionnaire: (jobId: string) => request<Questionnaire>(`/jobs/${jobId}/questionnaire`),
     apply: (jobId: string) => post<{ message: string; application_id: string }>(`/jobs/${jobId}/apply`),
     submitAnswers: (jobId: string, answers: AnswerSubmission[]) =>
@@ -132,5 +141,14 @@ export const api = {
       }),
     hire: (jobId: string, candidateId: string) =>
       post<Application>(`/jobs/${jobId}/candidates/${candidateId}/hire`),
+    aiSummary: (jobId: string, candidateId: string) =>
+      post<AiSummaryResponse>(`/jobs/${jobId}/candidates/${candidateId}/ai-summary`),
+  },
+
+  integrations: {
+    // Gera um time aleatório com o pool do OxeTech Academy (ou o roster
+    // sintético, quando a turma está sem alunos) e ranqueia os candidatos.
+    simulate: (payload: SimulateTeamRequest = {}) =>
+      post<SimulateTeamResponse>("/integrations/academy/simulate", payload),
   },
 };

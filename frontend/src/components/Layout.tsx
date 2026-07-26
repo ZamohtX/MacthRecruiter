@@ -146,6 +146,9 @@ export function Layout() {
             <NavLink to="/vagas" className={cls} style={activeStyle} onClick={onClick}>
               Vagas
             </NavLink>
+            <NavLink to="/candidatos" className={cls} style={activeStyle} onClick={onClick}>
+              Candidatos
+            </NavLink>
           </>
         )}
         {user?.role === "MEMBER" && (

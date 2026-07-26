@@ -5,6 +5,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.job import Job
 from app.models.team import Team, TeamInviteToken, TeamMember
 
 
@@ -70,6 +71,40 @@ class TeamRepository:
         stmt = select(TeamMember.id).where(TeamMember.team_id == team_id, TeamMember.user_id == user_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none() is not None
+
+    async def delete_team(self, team_id: UUID) -> bool:
+        """Exclui o time e, em cascata, integrantes, convites, vagas e candidaturas.
+
+        Carrega o grafo inteiro antes de excluir: a cascata `all, delete-orphan` é
+        aplicada pelo ORM em Python, o que funciona igual no SQLite (que não impõe
+        `ondelete` sem pragma) e evita lazy-load no meio do flush assíncrono.
+        """
+        stmt = (
+            select(Team)
+            .options(
+                selectinload(Team.members),
+                selectinload(Team.invite_tokens),
+                selectinload(Team.jobs).selectinload(Job.applications),
+            )
+            .where(Team.id == team_id)
+        )
+        team = (await self.db.execute(stmt)).scalar_one_or_none()
+        if team is None:
+            return False
+        await self.db.delete(team)
+        await self.db.commit()
+        return True
+
+    async def remove_member(self, team_id: UUID, user_id: UUID) -> bool:
+        """Remove uma pessoa do time. As respostas dela ficam (são do usuário) e
+        simplesmente saem da média, que usa só os integrantes atuais."""
+        stmt = select(TeamMember).where(TeamMember.team_id == team_id, TeamMember.user_id == user_id)
+        member = (await self.db.execute(stmt)).scalar_one_or_none()
+        if member is None:
+            return False
+        await self.db.delete(member)
+        await self.db.commit()
+        return True
 
     async def list_teams_for_user(self, user_id: UUID) -> list[Team]:
         """Times que a pessoa possui ou dos quais participa."""

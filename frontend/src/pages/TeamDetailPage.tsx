@@ -1,18 +1,48 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 
 import { api } from "../api/client";
-import { Button, Callout, Card, ErrorState, Input, PageTitle, Spinner } from "../components/ui";
+import {
+  Button,
+  Callout,
+  Card,
+  ConfirmButton,
+  Disclosure,
+  ErrorState,
+  InfoTip,
+  Input,
+  PageTitle,
+  Spinner,
+} from "../components/ui";
 import { ProfileBars } from "../viz/BarChart";
+import { Radar } from "../viz/Radar";
 import { StatTile } from "../viz/StatTile";
 import { DIMENSION_STATUS_COLOR, DIMENSION_STATUS_ICON, DIMENSION_STATUS_LABEL } from "../viz/scale";
 
 export function TeamDetailPage() {
   const { teamId = "" } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [jobTitle, setJobTitle] = useState("");
+
+  const invalidateTeam = () => {
+    void queryClient.invalidateQueries({ queryKey: ["team", teamId] });
+  };
+
+  const removeTeam = useMutation({
+    mutationFn: () => api.teams.remove(teamId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["teams"] });
+      navigate("/", { replace: true });
+    },
+  });
+
+  const removeMember = useMutation({
+    mutationFn: (userId: string) => api.teams.removeMember(teamId, userId),
+    onSuccess: invalidateTeam,
+  });
 
   const profile = useQuery({ queryKey: ["team", teamId, "profile"], queryFn: () => api.teams.profile(teamId) });
   const status = useQuery({ queryKey: ["team", teamId, "status"], queryFn: () => api.teams.diagnosticStatus(teamId) });
@@ -50,9 +80,17 @@ export function TeamDetailPage() {
         title={team.team_name}
         subtitle="Etapa 1 e 2 — diagnóstico do time e perfil-alvo por lacuna. Você é o responsável, não integrante."
         actions={
-          <Button variant="secondary" onClick={() => invite.mutate()} disabled={invite.isPending}>
-            {invite.isPending ? "Gerando…" : "Gerar convite"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={() => invite.mutate()} disabled={invite.isPending}>
+              {invite.isPending ? "Gerando…" : "Gerar convite"}
+            </Button>
+            <ConfirmButton
+              label="Excluir time"
+              confirmLabel="Excluir o time e suas vagas?"
+              disabled={removeTeam.isPending}
+              onConfirm={() => removeTeam.mutate()}
+            />
+          </div>
         }
       />
 
@@ -103,27 +141,38 @@ export function TeamDetailPage() {
           label="Dispersão do perfil"
           value={team.dispersion.toFixed(2)}
           hint="Alta = time especializado, com lacunas nítidas. Baixa = perfil uniforme."
-        />
+        >
+          <InfoTip term="dispersão" />
+        </StatTile>
       </div>
 
-      <ProfileBars
-        title="Perfil comportamental do time"
-        subtitle="Competências derivadas dos fatores. ▼ lacuna · ▲ força — posições dentro deste time, não notas absolutas."
-        data={dimensionData}
-        emptyMessage="Ninguém do time respondeu o teste ainda."
-      />
+      {team.respondent_count > 0 && (
+        <Radar
+          title="Radar comportamental do time"
+          subtitle="A forma média das 10 competências — os vales são as lacunas que uma contratação pode cobrir."
+          series={[{ label: team.team_name, color: "var(--series-1)", scores: team.dimension_scores }]}
+        />
+      )}
 
-      <ProfileBars
-        title="Fatores Big Five do time"
-        subtitle="A camada latente medida diretamente pelo teste situacional."
-        data={traitData}
-        color="var(--series-2)"
-        emptyMessage="Sem respostas ainda."
-      />
+      <Disclosure summary="Ver o perfil detalhado e o perfil-alvo por lacuna">
+        <ProfileBars
+          title="Perfil comportamental do time"
+          subtitle="Competências derivadas dos fatores. ▼ lacuna · ▲ força — posições dentro deste time, não notas absolutas."
+          data={dimensionData}
+          emptyMessage="Ninguém do time respondeu o teste ainda."
+        />
 
-      {/* ---------------------------------------------------- perfil-alvo */}
-      {gaps.isSuccess && (
-        <Card>
+        <ProfileBars
+          title="Fatores Big Five do time"
+          subtitle="A camada latente medida diretamente pelo teste situacional."
+          data={traitData}
+          color="var(--series-2)"
+          emptyMessage="Sem respostas ainda."
+        />
+
+        {/* ---------------------------------------------------- perfil-alvo */}
+        {gaps.isSuccess && (
+          <Card>
           <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
             Perfil-alvo por lacuna
           </h3>
@@ -172,7 +221,8 @@ export function TeamDetailPage() {
             </ul>
           )}
         </Card>
-      )}
+        )}
+      </Disclosure>
 
       {/* ------------------------------------------------- quem respondeu */}
       {status.isSuccess && (
@@ -205,15 +255,25 @@ export function TeamDetailPage() {
                     {member.email}
                   </p>
                 </div>
-                <span
-                  className="tabular text-xs"
-                  style={{
-                    color: member.assessment_completed ? "var(--status-good)" : "var(--text-muted)",
-                  }}
-                >
-                  <span aria-hidden>{member.assessment_completed ? "▲ " : "▼ "}</span>
-                  {member.answered_questions}/{member.total_questions} cenários
-                </span>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="tabular text-xs"
+                    style={{
+                      color: member.assessment_completed ? "var(--status-good)" : "var(--text-muted)",
+                    }}
+                  >
+                    <span aria-hidden>{member.assessment_completed ? "▲ " : "▼ "}</span>
+                    {member.answered_questions}/{member.total_questions} cenários
+                  </span>
+                  {!member.is_owner && (
+                    <ConfirmButton
+                      label="Remover"
+                      confirmLabel="Remover do time?"
+                      disabled={removeMember.isPending}
+                      onConfirm={() => removeMember.mutate(member.user_id)}
+                    />
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -254,12 +314,14 @@ export function TeamDetailPage() {
           </Button>
         </form>
         {createJob.isSuccess && (
-          <p className="mt-3 text-sm" style={{ color: "var(--text-secondary)" }}>
-            Vaga criada.{" "}
-            <Link to={`/vagas/${createJob.data.id}`} className="underline">
-              Ir para a vaga
+          <div className="mt-3">
+            <p className="mb-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+              Vaga criada.
+            </p>
+            <Link to={`/vagas/${createJob.data.id}`}>
+              <Button variant="secondary">Ir para a vaga</Button>
             </Link>
-          </p>
+          </div>
         )}
         {createJob.isError && (
           <p className="mt-3 text-sm" style={{ color: "var(--status-critical)" }}>

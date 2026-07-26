@@ -1,13 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 
 import { api } from "../api/client";
 import type { CandidateSummary } from "../api/types";
-import { Button, Callout, Card, EmptyState, ErrorState, PageTitle, Spinner } from "../components/ui";
+import { Button, Callout, Card, ConfirmButton, EmptyState, ErrorState, PageTitle, Spinner } from "../components/ui";
 import { StatTile, VerdictBadge } from "../viz/StatTile";
 
-function CandidateRow({ candidate, jobId }: { candidate: CandidateSummary; jobId: string }) {
+function CandidateRow({
+  candidate,
+  jobId,
+  onRemove,
+  removing,
+}: {
+  candidate: CandidateSummary;
+  jobId: string;
+  onRemove: (candidateId: string) => void;
+  removing: boolean;
+}) {
   const fit = candidate.fit_score;
   const supplementary = candidate.supplementary_fit_index;
 
@@ -89,6 +99,12 @@ function CandidateRow({ candidate, jobId }: { candidate: CandidateSummary; jobId
             Ver simulação
           </Button>
         </Link>
+        <ConfirmButton
+          label="Remover"
+          confirmLabel="Remover da vaga?"
+          disabled={removing}
+          onConfirm={() => onRemove(candidate.candidate_id)}
+        />
         <span className="text-xs" style={{ color: "var(--text-muted)" }}>
           {candidate.status}
         </span>
@@ -99,12 +115,29 @@ function CandidateRow({ candidate, jobId }: { candidate: CandidateSummary; jobId
 
 export function JobDetailPage() {
   const { jobId = "" } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [onlyComplementary, setOnlyComplementary] = useState(false);
 
   const job = useQuery({ queryKey: ["job", jobId], queryFn: () => api.jobs.get(jobId) });
   const candidates = useQuery({
     queryKey: ["job", jobId, "candidates"],
     queryFn: () => api.jobs.candidates(jobId),
+  });
+
+  const removeJob = useMutation({
+    mutationFn: () => api.jobs.remove(jobId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      navigate("/vagas", { replace: true });
+    },
+  });
+
+  const removeCandidate = useMutation({
+    mutationFn: (candidateId: string) => api.jobs.removeApplication(jobId, candidateId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["job", jobId] });
+    },
   });
 
   if (job.isPending) return <Spinner />;
@@ -124,6 +157,14 @@ export function JobDetailPage() {
             Time <Link to={`/times/${job.data.team_id}`} className="underline">{job.data.team_name}</Link> ·{" "}
             {job.data.application_count} candidatura(s)
           </>
+        }
+        actions={
+          <ConfirmButton
+            label="Excluir vaga"
+            confirmLabel="Excluir a vaga?"
+            disabled={removeJob.isPending}
+            onConfirm={() => removeJob.mutate()}
+          />
         }
       />
 
@@ -201,7 +242,13 @@ export function JobDetailPage() {
           ) : (
             <ul className="space-y-3">
               {visible.map((candidate) => (
-                <CandidateRow key={candidate.candidate_id} candidate={candidate} jobId={jobId} />
+                <CandidateRow
+                  key={candidate.candidate_id}
+                  candidate={candidate}
+                  jobId={jobId}
+                  onRemove={(candidateId) => removeCandidate.mutate(candidateId)}
+                  removing={removeCandidate.isPending}
+                />
               ))}
             </ul>
           ))}
@@ -211,7 +258,13 @@ export function JobDetailPage() {
 }
 
 export function JobsPage() {
+  const queryClient = useQueryClient();
   const jobs = useQuery({ queryKey: ["jobs"], queryFn: api.jobs.list });
+
+  const removeJob = useMutation({
+    mutationFn: (jobId: string) => api.jobs.remove(jobId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["jobs"] }),
+  });
 
   return (
     <div>
@@ -227,19 +280,25 @@ export function JobsPage() {
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2">
             {jobs.data.map((job) => (
-              <li key={job.id}>
-                <Link
-                  to={`/vagas/${job.id}`}
-                  className="block rounded-xl p-4 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.06]"
-                  style={{ background: "var(--surface-1)", border: "1px solid var(--hairline)" }}
-                >
-                  <p className="font-medium" style={{ color: "var(--text-primary)" }}>
+              <li
+                key={job.id}
+                className="flex items-center justify-between gap-3 rounded-xl p-4"
+                style={{ background: "var(--surface-1)", border: "1px solid var(--hairline)" }}
+              >
+                <Link to={`/vagas/${job.id}`} className="min-w-0 flex-1">
+                  <p className="truncate font-medium" style={{ color: "var(--text-primary)" }}>
                     {job.title}
                   </p>
                   <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
                     Aberta em {new Date(job.created_at).toLocaleDateString("pt-BR")}
                   </p>
                 </Link>
+                <ConfirmButton
+                  label="Excluir"
+                  confirmLabel="Excluir a vaga?"
+                  disabled={removeJob.isPending}
+                  onConfirm={() => removeJob.mutate(job.id)}
+                />
               </li>
             ))}
           </ul>

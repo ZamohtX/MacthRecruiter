@@ -24,9 +24,12 @@ export function StatTile({ label, value, hint, meter, meterColor = "var(--seq-fi
       className="rounded-xl p-4"
       style={{ background: "var(--surface-1)", border: "1px solid var(--hairline)" }}
     >
-      <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-        {label}
-      </p>
+      <div className="flex items-center gap-1.5">
+        <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+          {label}
+        </p>
+        {children}
+      </div>
       <p className="mt-1 text-3xl font-semibold" style={{ color: "var(--text-primary)" }}>
         {value}
       </p>
@@ -52,7 +55,6 @@ export function StatTile({ label, value, hint, meter, meterColor = "var(--seq-fi
           {hint}
         </p>
       )}
-      {children}
     </div>
   );
 }

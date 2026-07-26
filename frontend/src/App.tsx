@@ -5,6 +5,7 @@ import { useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { Spinner } from "./components/ui";
 import { ApplyPage, CandidateHome, InvitePage, MyAssessmentPage } from "./pages/AssessmentPages";
+import { CandidatesPage } from "./pages/CandidatesPage";
 import { ImpactPage } from "./pages/ImpactPage";
 import { JobDetailPage, JobsPage } from "./pages/JobDetailPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -78,6 +79,14 @@ export function App() {
           element={
             <RequireAuth>
               <ImpactPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/candidatos"
+          element={
+            <RequireAuth>
+              <CandidatesPage />
             </RequireAuth>
           }
         />

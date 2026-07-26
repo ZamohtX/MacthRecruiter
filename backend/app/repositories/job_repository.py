@@ -34,6 +34,25 @@ class JobRepository:
         await self.db.refresh(job)
         return job
 
+    async def delete_job(self, job_id: UUID) -> bool:
+        """Exclui a vaga e, em cascata, suas candidaturas (via ORM, para valer no SQLite)."""
+        stmt = select(Job).options(selectinload(Job.applications)).where(Job.id == job_id)
+        job = (await self.db.execute(stmt)).scalar_one_or_none()
+        if job is None:
+            return False
+        await self.db.delete(job)
+        await self.db.commit()
+        return True
+
+    async def delete_application(self, job_id: UUID, candidate_id: UUID) -> bool:
+        """Remove a candidatura de uma pessoa a uma vaga. As respostas dela ficam."""
+        app = await self.get_application(job_id, candidate_id)
+        if app is None:
+            return False
+        await self.db.delete(app)
+        await self.db.commit()
+        return True
+
     async def create_application(self, job_id: UUID, candidate_id: UUID) -> CandidateApplication:
         stmt = select(CandidateApplication).where(
             CandidateApplication.job_id == job_id,

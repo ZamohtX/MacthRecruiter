@@ -4,9 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, get_db
+from app.integrations.gemini.client import GeminiClient, GeminiError
+from app.integrations.gemini.summary import build_prompt, fallback_summary
 from app.models.job import ApplicationStatus
 from app.models.user import User
 from app.repositories.job_repository import JobRepository
+from app.schemas.integration import AiSummaryResponse
 from app.schemas.job import (
     ApplicationResponse,
     ApplicationStatusUpdate,
@@ -27,6 +30,11 @@ from app.services.recruitment_service import RecruitmentService
 from app.services.soft_skills_service import SoftSkillsService
 
 router = APIRouter()
+
+# Cache em processo do resumo por (job, candidato): as respostas do candidato são
+# estáveis, então não vale gastar quota do Gemini reescrevendo o mesmo texto a
+# cada abertura da tela.
+_summary_cache: dict[tuple[UUID, UUID], AiSummaryResponse] = {}
 
 
 @router.post("", response_model=JobResponse, status_code=201)
@@ -181,6 +189,39 @@ async def get_candidate_impact_analysis(
     return await soft_skills_service.calculate_impact_analysis(job_id=job_id, candidate_id=candidate_id)
 
 
+@router.post(
+    "/{job_id}/candidates/{candidate_id}/ai-summary",
+    response_model=AiSummaryResponse,
+)
+async def get_candidate_ai_summary(
+    job_id: UUID,
+    candidate_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> AiSummaryResponse:
+    """Resumo do candidato em linguagem simples (Gemini), com fallback determinístico."""
+    recruitment = RecruitmentService(db)
+    await recruitment.ensure_job_owner(job_id, current_user)
+
+    cache_key = (job_id, candidate_id)
+    if cache_key in _summary_cache:
+        return _summary_cache[cache_key]
+
+    impact = await SoftSkillsService(db).calculate_impact_analysis(job_id=job_id, candidate_id=candidate_id)
+
+    # Gemini quando dá; senão, o texto-regra com os mesmos dados. O resumo é apoio
+    # — nunca deve derrubar a tela por causa de quota/rede.
+    try:
+        async with GeminiClient.from_settings() as gemini:
+            text = await gemini.generate(build_prompt(impact))
+        result = AiSummaryResponse(summary=text, source="ai", model=gemini.model)
+    except GeminiError:
+        result = AiSummaryResponse(summary=fallback_summary(impact), source="fallback")
+
+    _summary_cache[cache_key] = result
+    return result
+
+
 @router.patch(
     "/{job_id}/candidates/{candidate_id}/status",
     response_model=ApplicationResponse,
@@ -219,3 +260,30 @@ async def hire_candidate(
     if application is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
     return application
+
+
+@router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_job(
+    job_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Exclui a vaga (e, em cascata, suas candidaturas)."""
+    service = RecruitmentService(db)
+    await service.ensure_job_owner(job_id, current_user)
+    await JobRepository(db).delete_job(job_id)
+
+
+@router.delete("/{job_id}/candidates/{candidate_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_candidate(
+    job_id: UUID,
+    candidate_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Remove uma candidatura da vaga. As respostas da pessoa ficam com ela."""
+    service = RecruitmentService(db)
+    await service.ensure_job_owner(job_id, current_user)
+    removed = await JobRepository(db).delete_application(job_id, candidate_id)
+    if not removed:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Candidatura não encontrada.")

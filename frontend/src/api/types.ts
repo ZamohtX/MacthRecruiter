@@ -294,3 +294,52 @@ export interface Application {
   status: ApplicationStatus;
   applied_at: string;
 }
+
+// ---------------------------------------------------------------------------
+// Integração OxeTech Academy — geração de time a partir do pool de talentos.
+// Espelha app/schemas/integration.py.
+// ---------------------------------------------------------------------------
+
+export interface SimulatedCandidate {
+  candidate_id: string;
+  /** Ausente quando a turma é reconstruída do banco (reabrir a aba). */
+  aluno_id?: number | null;
+  name: string;
+  techs: string[];
+  candidate_scores: ScoreMap;
+  fit_score: number;
+  supplementary_fit_index: number;
+  verdict: FitVerdict;
+  gaps_filled: string[];
+  gaps_missed: string[];
+}
+
+export interface SimulateTeamResponse {
+  /** "academy_api" quando veio da API real; "synthetic" quando a turma está sem alunos. */
+  source: "academy_api" | "synthetic";
+  team_id: string;
+  team_name: string;
+  team_scores: ScoreMap;
+  job_id: string;
+  job_title: string;
+  respondent_count: number;
+  dispersion_before: number;
+  candidates: SimulatedCandidate[];
+}
+
+export interface AiSummaryResponse {
+  summary: string;
+  /** "ai" = veio do Gemini; "fallback" = texto-regra (Gemini indisponível). */
+  source: "ai" | "fallback";
+  model?: string | null;
+}
+
+export interface SimulateTeamRequest {
+  team_size?: number;
+  team_name?: string;
+  job_title?: string;
+  seed?: number;
+  limit?: number;
+  /** Força um time novo em vez de reaproveitar a turma já gerada. */
+  regenerate?: boolean;
+}

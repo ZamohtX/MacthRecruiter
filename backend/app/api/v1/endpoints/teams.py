@@ -100,6 +100,38 @@ async def create_team_invite(
     return TeamInviteCreateResponse(invite_token=invite.token, invite_url=invite_url, expires_at=invite.expires_at)
 
 
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_team(
+    id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Exclui o time (e, em cascata, integrantes, convites, vagas e candidaturas)."""
+    team_repo = TeamRepository(db)
+    await _ensure_owner(team_repo, id, current_user)
+    await team_repo.delete_team(id)
+
+
+@router.delete("/{id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_team_member(
+    id: UUID,
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Remove uma pessoa do time. As respostas dela ficam e saem sozinhas da média."""
+    team_repo = TeamRepository(db)
+    team = await _ensure_owner(team_repo, id, current_user)
+    if user_id == team.owner_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O responsável pelo time não pode ser removido.",
+        )
+    removed = await team_repo.remove_member(id, user_id)
+    if not removed:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Integrante não encontrado neste time.")
+
+
 @router.get("/{id}/soft-skills-profile", response_model=TeamSoftSkillsProfileResponse)
 async def get_team_soft_skills_profile(
     id: UUID,
